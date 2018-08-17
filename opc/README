@@ -1,1 +1,5 @@
 client
+
+分为3个进程:
+    1. 主进程M: 发现ops上线，拿到ops的IP/Port, 启动服务进程S, 将拿到的IP/Port通过shared mem传给S
+    2. 服务进程S: 响应请求
