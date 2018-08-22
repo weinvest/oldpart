@@ -31,5 +31,3 @@ INSTALL(TARGETS ${TARGET}
 FILE(GLOB_RECURSE ${TARGET}_HEADER_LISTS "*.h" "*.hpp")
 INSTALL_FILES(include ${TARGET}_HEADER_LISTS)
 
-add_subdirectory(bpy)
-

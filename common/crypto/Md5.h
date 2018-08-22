@@ -11,7 +11,7 @@ using namespace std;
 /*!
  * Manage MD5.
  */
-class COMMON_EXPORT MD5
+class  MD5
 {
 private:
     #define uint8  unsigned char
