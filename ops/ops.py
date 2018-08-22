@@ -11,6 +11,16 @@ class OPSCmd(cmd.Cmd):
         ops.listen(ip, port)
         ops.run()
 
-    def do_ls(self, l):
-        pass
+        self.machines = []
+
+    def do_mas(self, machines):
+        self.work_machines = [mac for mac in machines if mac in ops.allMachines()]
+
+    def do_ls(self, fpath):
+        ls_cmd = ops.ls_cmd(fpath)
+        ops.send(ls_cmd)
+
+
+    def do_cat(self, fpath):
+
         
