@@ -1,15 +1,13 @@
-#ifndef _MSOCKET_H
-#define _MSOCKET_H
-
+#ifndef _OLDPART_MSOCKET_H
+#define _OLDPART_MSOCKET_H
+#include <cstdint>
+#include <boost/asio/ip/udp.hpp>
 namespace boost { namespace asio { 
     class io_context; 
     namespace ip { 
         class address; 
-        namespace udp {
-            class socket;
-            class endpoint;
-        }
     }
+}
 }
 
 class Discover;
@@ -22,7 +20,7 @@ public:
         virtual ~MessageHandler() {}
 
         virtual void OnMessage(const Discover& discover) = 0;
-	virtual bool FiltOut(const Discover& discover) = 0;
+        virtual bool FiltOut(const Discover& discover) = 0;
     };
 
     MSocket(boost::asio::io_context& io_context
@@ -43,5 +41,5 @@ private:
     boost::asio::ip::udp::endpoint mSenderEndpoint;
     MessageHandler* mMessageHandler{nullptr};
 };
-#endif//_MSOCKET_H
+#endif//_OLDPART_MSOCKET_H
 

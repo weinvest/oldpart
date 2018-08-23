@@ -16,7 +16,7 @@ using namespace std;
 
 #define AES_BLOCK_SIZE 16
 
-bool COMMON_EXPORT AESEncrypt(std::string &ciphertext, const std::string &key, const std::string &plaintext,int & padNum)
+bool  AESEncrypt(std::string &ciphertext, const std::string &key, const std::string &plaintext,int & padNum)
 {
        AES_KEY aes;
        unsigned char iv[AES_BLOCK_SIZE];
@@ -44,7 +44,7 @@ bool COMMON_EXPORT AESEncrypt(std::string &ciphertext, const std::string &key, c
        return true;
 }
 
-bool COMMON_EXPORT AESEncrypt(char *ciphertext, int &cipherLen, const std::string &key, const char *plaintext,int plainLen,int & padNum)
+bool  AESEncrypt(char *ciphertext, int &cipherLen, const std::string &key, const char *plaintext,int plainLen,int & padNum)
 {
        AES_KEY aes;
        unsigned char iv[AES_BLOCK_SIZE];
@@ -71,7 +71,7 @@ bool COMMON_EXPORT AESEncrypt(char *ciphertext, int &cipherLen, const std::strin
        return true;
 }
 
-bool COMMON_EXPORT AESDecrypt(std::string &decrypttext, const std::string &key,const std::string &ciphertext,int padNum)
+bool  AESDecrypt(std::string &decrypttext, const std::string &key,const std::string &ciphertext,int padNum)
 {
     AES_KEY aes;
     unsigned char iv[AES_BLOCK_SIZE];
@@ -91,7 +91,7 @@ bool COMMON_EXPORT AESDecrypt(std::string &decrypttext, const std::string &key,c
     return true;
 }
 
-bool COMMON_EXPORT AESDecrypt(char* decrypttext,int &decryptLen, const std::string &key,const char* ciphertext,int cipherLen,int padNum)
+bool  AESDecrypt(char* decrypttext,int &decryptLen, const std::string &key,const char* ciphertext,int cipherLen,int padNum)
 {
     AES_KEY aes;
     unsigned char iv[AES_BLOCK_SIZE];
@@ -112,7 +112,7 @@ bool COMMON_EXPORT AESDecrypt(char* decrypttext,int &decryptLen, const std::stri
     return true;
 }
 
-bool COMMON_EXPORT RSAEncryptWithStr(std::string &ciphertext,const std::string& pubKeyStr, const std::string& plaintext)
+bool  RSAEncryptWithStr(std::string &ciphertext,const std::string& pubKeyStr, const std::string& plaintext)
 {
     BIO* pBufIO = BIO_new_mem_buf((void*)pubKeyStr.c_str(), pubKeyStr.length());
     RSA* pRSAPublicKey = RSA_new();
@@ -134,7 +134,7 @@ bool COMMON_EXPORT RSAEncryptWithStr(std::string &ciphertext,const std::string& 
     return true;
 }
 
-bool COMMON_EXPORT RSAEncrypt(std::string &ciphertext,const std::string& publicKeyFileURL, const std::string& plaintext)
+bool  RSAEncrypt(std::string &ciphertext,const std::string& publicKeyFileURL, const std::string& plaintext)
 {
     if (publicKeyFileURL.empty() || plaintext.empty())
     {
@@ -148,7 +148,7 @@ bool COMMON_EXPORT RSAEncrypt(std::string &ciphertext,const std::string& publicK
     return RSAEncryptWithStr(ciphertext,keyString,plaintext);
 }
 
-bool COMMON_EXPORT RSADecryptWithStr(std::string &decrypttext , const std::string& privateKeyStr, const std::string& ciphertext)
+bool  RSADecryptWithStr(std::string &decrypttext , const std::string& privateKeyStr, const std::string& ciphertext)
 {
     RSA* pRSAPriKey = RSA_new();
     BIO* pBufIO = BIO_new_mem_buf((void*)privateKeyStr.c_str(), privateKeyStr.length());
@@ -171,7 +171,7 @@ bool COMMON_EXPORT RSADecryptWithStr(std::string &decrypttext , const std::strin
     return true;
 }
 
-bool COMMON_EXPORT RSADecrypt( std::string &decrypttext ,const std::string& privateKeyFileURL, const std::string& ciphertext )
+bool  RSADecrypt( std::string &decrypttext ,const std::string& privateKeyFileURL, const std::string& ciphertext )
 {
     if (privateKeyFileURL.empty() || ciphertext.empty())
     {

@@ -4,7 +4,6 @@
 //#pragma warning(disable:4786)
 
 #include <string>
-#include "common/common_global.h"
 
 using namespace std;
 

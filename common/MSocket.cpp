@@ -1,5 +1,7 @@
+#include <boost/asio/ip/multicast.hpp>
 #include "MSocket.h"
 #include "opp/Discover.h"
+
 MSocket::MSocket(boost::asio::io_context& io_context
     ,const boost::asio::ip::address& listen_address
     ,const boost::asio::ip::address& multicast_address
@@ -50,5 +52,7 @@ void MSocket::DoReceive()
 }
 
 MSocket::~MSocket()
-{}
+{
+
+}
 
