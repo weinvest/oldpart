@@ -15,6 +15,12 @@ using boost::asio::ip::udp;
 class FindOrganization: public MSocket::MessageHandler
 {
 public:
+    struct OrganizationIP
+    {
+	int32_t ip;
+	int32_t port;
+    };
+
     FindOrganization(MSocket* pSocket)
         :mSocket(pSocket)
     {}
