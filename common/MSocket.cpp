@@ -29,7 +29,7 @@ void MSocket::Send(const Discover& discover)
         boost::asio::buffer(&discover, sizeof(discover)), mSenderEndpoint,
         [this](boost::system::error_code ec, std::size_t /*length*/)
         {
-            
+
         });
 }
 
@@ -51,8 +51,12 @@ void MSocket::DoReceive()
       });
 }
 
+boost::asio::io_context& MSocket::GetExecutor( void )
+{
+    return mSocket.get_executor();
+}
+
 MSocket::~MSocket()
 {
 
 }
-

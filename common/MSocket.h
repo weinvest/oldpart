@@ -2,10 +2,10 @@
 #define _OLDPART_MSOCKET_H
 #include <cstdint>
 #include <boost/asio/ip/udp.hpp>
-namespace boost { namespace asio { 
-    class io_context; 
-    namespace ip { 
-        class address; 
+namespace boost { namespace asio {
+    class io_context;
+    namespace ip {
+        class address;
     }
 }
 }
@@ -34,6 +34,7 @@ public:
 
     void Send(const Discover& discover);
 
+    boost::asio::io_context& GetExecutor( void );
 private:
     void DoReceive();
 
@@ -42,4 +43,3 @@ private:
     MessageHandler* mMessageHandler{nullptr};
 };
 #endif//_OLDPART_MSOCKET_H
-
