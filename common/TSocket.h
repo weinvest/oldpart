@@ -29,11 +29,13 @@ public:
 private:
     void DoRead();
 
-    void DoWrite();
+    void DoWrite(std::shared_ptr<OMessage> pMessage);
 
     boost::asio::io_context& mIOContext;
     boost::asio::ip::tcp::socket mSocket;
     std::weak_ptr<IConnectionManager> mManager;
     std::shared_ptr<MessageHandler> mMessageHandler;
+    std::vector<std::shared_ptr<DMessage>> mPendingMessages;
+    bool mIsInSending{false};
 };
 #endif /* end of include guard: _OLDPART_TSOCKET_H */

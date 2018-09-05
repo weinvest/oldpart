@@ -12,7 +12,10 @@ TSocket::TSocket(boost::asio::io_context& ioContext
 
 void TSocket::Send(std::shared_ptr<OMessage> pMessage)
 {
-
+    mIOContext.post([this, pMessage]()
+    {
+        mPendingMessages.push_back(pMessage);
+    });
 }
 
 void TSocket::DoRead()
@@ -49,8 +52,9 @@ void TSocket::DoRead()
          });
 }
 
-void TSocket::DoWrite()
+void TSocket::DoWrite(std::shared_ptr<OMessage> pMessage)
 {
+    mIsInSending = true;
     auto self(shared_from_this());
     boost::asio::async_write(mSocket, reply_.to_buffers(),
      [this, self](boost::system::error_code ec, std::size_t)
