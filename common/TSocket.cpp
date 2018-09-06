@@ -14,36 +14,48 @@ void TSocket::Send(std::shared_ptr<OMessage> pMessage)
 {
     mIOContext.post([this, pMessage]()
     {
-        mPendingMessages.push_back(pMessage);
+        if(mPendingMessages.empty())
+        {
+            DoWrite(pMessage);
+        }
+        else
+        {
+            mPendingMessages.push_back(pMessage);
+        }
     });
 }
 
 void TSocket::DoRead()
 {
     auto self(shared_from_this());
-    mSocket.async_read_some(boost::asio::buffer(buffer_),
+    auto pMessage = std::make_shared<OMessage>();
+    mSocket.async_read(boost::asio::buffer(pMessage.get(), pMessage->GetHeadLength()),
          [this, self](boost::system::error_code ec, std::size_t bytes_transferred)
          {
             if (!ec)
             {
-                request_parser::result_type result;
-                std::tie(result, std::ignore) = request_parser_.parse(
-                    request_, buffer_.data(), buffer_.data() + bytes_transferred);
-
-                if (result == request_parser::good)
-                {
-                    request_handler_.handle_request(request_, reply_);
-                    do_write();
-                }
-                else if (result == request_parser::bad)
-                {
-                    reply_ = reply::stock_reply(reply::bad_request);
-                    do_write();
-                }
-                else
-                {
-                    do_read();
-                }
+                mMessageHandler->ToHost();
+　　　　　　　　　if(0 == pMessage->GetBodyLength())
+               {
+                   DoRead();
+                   mMessageHandler->OnMessage(pMessage);
+               }
+               else
+               {
+                   mSocket.async_read(pMessage->GetReceiveBuffer(),
+                        [this, self](boost::system::error_code ec, std::size_t bytes_transferred)
+                        {
+                           if (!ec)
+                           {
+                               DoRead();
+                               mMessageHandler->OnMessage(pMessage);
+                           }
+                           else if (ec != boost::asio::error::operation_aborted)
+                           {
+                               mManager.lock()->Stop(shared_from_this());
+                           }
+                       });
+               }
             }
             else if (ec != boost::asio::error::operation_aborted)
             {
@@ -56,15 +68,23 @@ void TSocket::DoWrite(std::shared_ptr<OMessage> pMessage)
 {
     mIsInSending = true;
     auto self(shared_from_this());
-    boost::asio::async_write(mSocket, reply_.to_buffers(),
+
+    auto bufs = std::move(pMessage->GetSendBuffer());
+    boost::asio::async_write(mSocket, bufs,
      [this, self](boost::system::error_code ec, std::size_t)
      {
        if (!ec)
        {
-           // Initiate graceful connection closure.
-           boost::system::error_code ignored_ec;
-           mSocket.shutdown(boost::asio::ip::tcp::socket::shutdown_both,
-               ignored_ec);
+           if(!mPendingMessages.empty())
+           {
+               auto pNextMessage = mPendingMessages.front();
+               mPendingMessages.pop_front();
+               DoWrite(pNextMessage);
+           }
+           else
+           {
+               mIsInSending = false;
+           }
        }
 
        if (ec != boost::asio::error::operation_aborted)

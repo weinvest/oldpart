@@ -13,7 +13,7 @@ public:
     public:
         virtual ~MessageHandler() {}
 
-        virtual void OnMessage(const Discover& discover) = 0;
+        virtual void OnMessage(const std::shared_ptr<OMessage>& discover) = 0;
     };
 
     TSocket(const TSocket&) = delete;
@@ -35,7 +35,7 @@ private:
     boost::asio::ip::tcp::socket mSocket;
     std::weak_ptr<IConnectionManager> mManager;
     std::shared_ptr<MessageHandler> mMessageHandler;
-    std::vector<std::shared_ptr<DMessage>> mPendingMessages;
+    std::deque<std::shared_ptr<DMessage>> mPendingMessages;
     bool mIsInSending{false};
 };
 #endif /* end of include guard: _OLDPART_TSOCKET_H */
