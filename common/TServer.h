@@ -9,10 +9,11 @@
 class TServer
 {
 public:
-    TServer(const std::string& address
+    TServer(std::shared_ptr<IOContextPool> pIOContextPool
+        , const std::string& address
         , const std::string& port
         , std::shared_ptr<IConnectionManager> pConnectionManager
-        , std::shared_ptr<MessageHandler> pMessageHandler
+        , std::shared_ptr<TSocket::MessageHandler> pMessageHandler
     );
 
     bool Send(const std::string& peer, std::shared_ptr<OMessage>& pMessage);
@@ -20,8 +21,7 @@ private:
     void WaitStop();
     void DoAccept();
 
-    /// The io_context used to perform asynchronous operations.
-    boost::asio::io_context mExecutor;
+    std::shared_ptr<IOContextPool> mIOContextPool;
 
     /// The signal_set is used to register for process termination notifications.
     boost::asio::signal_set mSignals;

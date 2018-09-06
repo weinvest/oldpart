@@ -10,15 +10,16 @@ public:
 
     void Start(std::shared_ptr<TSocket> pSocket) = 0;
     void Stop(std::shared_ptr<TSocket> pSocket) = 0;
-    void StopAll(std::shared_ptr<TSocket> pSocket) = 0;
+    void StopAll() = 0;
 
     bool AddMapping(uint64_t ip, const std::string& name) { return mNameMapping.insert(std::make_pair(ip, name)); }
     const std::string& FindInMapping(uint64_t ip)
     {
+        static std::string EMPTY("");
         auto itName = mNameMapping.find(ip);
         if(itName == mNameMapping.end())
         {
-            return "";
+            return EMPTY;
         }
 
         return itName->second;

@@ -93,3 +93,13 @@ void TSocket::DoWrite(std::shared_ptr<OMessage> pMessage)
        }
      });
 }
+
+void TSocket::Start()
+{
+    DoRead();
+}
+
+void TSocket::Stop()
+{
+    mSocket.close();
+}

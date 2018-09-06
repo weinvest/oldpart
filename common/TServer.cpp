@@ -1,12 +1,13 @@
 #include "TServer.h"
 
-TTServer::TServer(TServer(const std::string& address
+TTServer::TServer(TServer(std::shared_ptr<IOContextPool> pIOContextPool
+    , const std::string& address
     , const std::string& port
     , std::shared_ptr<IConnectionManager> pConnectionManager
-    , std::shared_ptr<MessageHandler> pMessageHandler)
-  : mExecutor(1),
-    mSignals(mExecutor),
-    mAccetptor(mExecutor),
+    , std::shared_ptr<TSocket::MessageHandler> pMessageHandler)
+  : mIOContextPool(pIOContextPool),
+    mSignals(pIOContextPool.GetIOContext()),
+    mAccetptor(pIOContextPool.GetIOContext()),
     mConnectionManager(pConnectionManager),
     mMessageHandler(pMessageHandler)
 {
@@ -32,15 +33,6 @@ TTServer::TServer(TServer(const std::string& address
     DoAccept();
 }
 
-void TServer::run()
-{
-    // The io_context::run() call will block until all asynchronous operations
-    // have finished. While the server is running, there is always at least one
-    // asynchronous operation outstanding: the asynchronous accept call waiting
-    // for new incoming connections.
-    mExecutor.run();
-}
-
 bool TServer::Send(const std::string& peer, std::shared_ptr<OMessage>& pMessage)
 {
     auto itClient = mClients.find(peer);
@@ -54,8 +46,9 @@ bool TServer::Send(const std::string& peer, std::shared_ptr<OMessage>& pMessage)
 
 void TServer::DoAccept()
 {
-    mAcceptor.async_accept(
-      [this](boost::system::error_code ec, boost::asio::ip::tcp::socket socket)
+    auto pClient = std::make_shared<TSocket>(mIOContextPool.GetIOContext(), mConnectionManager, mMessageHandler);
+    mAcceptor.async_accept(pClient->GetSocket()
+      , [this, pClient](boost::system::error_code ec, boost::asio::ip::tcp::socket socket)
       {
         // Check whether the server was stopped by a signal before this
         // completion handler had a chance to run.
@@ -66,7 +59,6 @@ void TServer::DoAccept()
 
         if (!ec)
         {
-            auto pClient = std::make_shared<TSocket>(std::move(socket), mConnectionManager, mMessageHandler);
             auto clientName = mConnectionManager->FindInMapping(socket.remote_endpoint().to_v4().to_ulong());
             mClients.insert(std::make_pair(clientName, pClient));
             mConnectionManager->Start(pClient);

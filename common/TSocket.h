@@ -26,6 +26,9 @@ public:
     auto& GetSocket() { return mSocket; }
     auto& GetExecutor() { return mIOContext; }
     void Send(std::shared_ptr<OMessage> pMessage);
+
+    void Start();
+    void Stop();
 private:
     void DoRead();
 
