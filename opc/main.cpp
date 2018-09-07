@@ -1,6 +1,7 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/signal_set.hpp>
+#include <boost/program_options.hpp>
 #include <array>
 #include <ctime>
 #include <iostream>
@@ -31,11 +32,13 @@ public:
         int32_t port;
     };
 
-    FindOrganization(MSocket* pSocket)
+    FindOrganization(MSocket* pSocket, int32_t ip, const char* name)
         :mSocket(pSocket)
-    {}
+	    ,mIP(ip)
+    {
+        strncpy(mName, name, 32-1-6);
+    }
 
-    using RowIP_t = int32_t;
     void OnMessage(const Discover& discover) override
     {
         for(auto& orgaPair : mOrganizations)
@@ -45,18 +48,18 @@ public:
             {
                 syslog(LOG_NOTICE | LOG_USER, "%s　find duplicate　organization %d.%d.%d.%d:%d, %m"
                     , __FUNCTION__, organizationIP.ipp1, organizationIP.ipp2, organizationIP.ipp3
-                    , organizationIP.ipp4, , organizationIP.port
+                    , organizationIP.ipp4, organizationIP.port
                 );
                 return;
             }
         }
 
         Discover response;
-        response.magic = ;
-        response.ip = ;
-        response.port = ;
-        response.name = ;
-        mSocket.Send(response);
+        response.magic = -1;
+        response.ip = mIP;
+        response.port = 0; //TODO
+        response.name = mName;
+        mSocket->Send(response);
     }
 
     bool FiltOut(const Discover& discover) override
@@ -66,7 +69,8 @@ public:
 
     void WaitOrganizationExit()
     {
-        auto pid = waitpid(-1, status, WNOHANG);
+	int32_t status = 0;
+        auto pid = waitpid(-1, &status, WNOHANG);
         if(pid > 0)
         {
             mOrganizations.erase(pid);
@@ -78,7 +82,9 @@ public:
     }
 private:
     MSocket* mSocket{nullptr};
-    std::unordered_map<pid_t, RowIP_t> mOrganizations;
+    std::unordered_map<pid_t, OrganizationIP> mOrganizations;
+    int32_t mIP{-1};
+    char mName[32];
 };
 
 namespace fs = std::experimental::filesystem;
@@ -89,10 +95,28 @@ int main(int argc, char** argv)
         fs::path progPath(argv[0]);
         auto progName = progPath.filename().string();
 
-        if(4 != argc)
+        using namespace boost::program_options;
+        options_description opts("opc options");
+        opts.add_options()
+                ("help,h","print this help information.")
+                ("name,n",value<std::string>(), "name")
+                ("ip,l", value<std::string>(), "tcp ip")
+                ("mip,i", value<std::string>(), "multicast ip")
+                ("mport,p", value<uint16_t>(), "multicast port");
+
+        variables_map vm;
+        store(parse_command_line(argc,argv,opts),vm);
+
+        if(vm.count("help"))
         {
-            std::cout << "usage: " << progName << " listen_address multicast_address multicast_port\n";
+            std::cout<<opts<<std::endl;
             return 0;
+        }
+
+        if(!(vm.count("name") && vm.count("ip") && vm.count(mip) && vm.count("mport")))
+        {
+            std::cout<<opts<<std::endl;
+            retunr -1;
         }
 
         boost::asio::io_context io_context;
@@ -100,12 +124,19 @@ int main(int argc, char** argv)
         // Initialise the server before becoming a daemon. If the process is
         // started from a shell, this means any errors will be reported back to the
         // user.
+        auto name = vm["name"].as<std::string>();
+        auto ip = vm["ip"].as<std::string>();
+        auto mip = vm["mip"].as<std::string>();
+        auto mport = vm["mport"].as<uint16_t>();
         MSocket socket(io_context
-            , boost::asio::ip::make_address(argv[1]) //listen address
-            , boost::asio::ip::make_address(argv[2]) //multicast address
-            , std::atoi(argv[3])); //multicast port
+            , ip //listen address
+            , mip //multicast address
+            , mport); //multicast port
 
-        FindOrganization server(&socket);
+        boost::asio::ip::tcp::resolver resolver(io_context);
+        auto endpoint = resolver.resolve(ip, 22).begin();
+
+        FindOrganization server(&socket, endpoint..address().to_v4().to_uint(), name.c_str());
 
         // Register signal handlers so that the daemon may be shut down. You may
         // also want to register for other signals, such as SIGHUP to trigger a
@@ -117,8 +148,8 @@ int main(int argc, char** argv)
                 io_context.stop();
             });
 
-        boost::asio::signal_set signals(io_context, SIGCHLD);
-        signals.async_wait(
+        boost::asio::signal_set childSignals(io_context, SIGCHLD);
+        childSignals.async_wait(
             [&](boost::system::error_code /*ec*/, int signo)
             {
                 server.WaitOrganizationExit();

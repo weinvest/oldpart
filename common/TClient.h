@@ -1,10 +1,11 @@
 #ifndef _OLDPART_TCLIENT_H
 #define _OLDPART_TCLIENT_H
 #include <memory>
-#include "commcon/TSocket.h"
+#include "common/TSocket.h"
+#include "common/IConnectionManager.h"
 
 namespace boost { namespace asio { class io_context;}}
-class TClient: std::enable_shared_from_this<TClient>
+class TClient: public IConnectionManager, private std::enable_shared_from_this<TClient>
 {
 public:
     TClient(boost::asio::io_context& ioContext, std::shared_ptr<TSocket::MessageHandler> pMessageHandler);

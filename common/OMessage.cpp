@@ -20,13 +20,13 @@ OMessage::ReceiveBuffer OMessage::GetReceiveBuffer()
     return boost::asio::buffer(boost::asio::mutable_buffer(mBody, GetBodyLength()));
 }
 
-SendBuffer OMessage::GetSendBuffer()
+OMessage::SendBuffer OMessage::GetSendBuffer()
 {
     SendBuffer bufs;
-    bufs.push_back(boost::asio::const_buffer(pMessage->GetHead(), pMessage->GetHeadLength()));
+    bufs.push_back(boost::asio::const_buffer(GetHead(), GetHeadLength()));
     if(0 != GetBodyLength())
     {
-        bufs.push_back(boost::asio::const_buffer(pMessage->GetBody(), pMessage->GetBodyLength()));
+        bufs.push_back(boost::asio::const_buffer(GetBody(), GetBodyLength()));
     }
 
     return bufs;

@@ -1,6 +1,8 @@
 #ifndef _OLDPART_IOCONTEXT_POOL_H
 #define _OLDPART_IOCONTEXT_POOL_H
 #include <vector>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/executor_work_guard.hpp>
 #include <boost/noncopyable.hpp>
 /// A pool of io_context objects.
 class IOContextPool
@@ -28,7 +30,7 @@ private:
   std::vector<io_context_ptr> io_contexts_;
 
   /// The work that keeps the io_contexts running.
-  std::list<io_context_work> work_;
+  std::vector<io_context_work> work_;
 
   /// The next io_context to use for a connection.
   std::size_t next_io_context_;

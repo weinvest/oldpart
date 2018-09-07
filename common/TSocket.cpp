@@ -1,5 +1,7 @@
+#include <boost/asio/write.hpp>
+#include <boost/asio/read.hpp>
 #include "TSocket.h"
-
+#include "IConnectionManager.h"
 TSocket::TSocket(boost::asio::io_context& ioContext
     , std::shared_ptr<IConnectionManager> pManager
     , std::shared_ptr<MessageHandler> pHandler)
@@ -12,7 +14,8 @@ TSocket::TSocket(boost::asio::io_context& ioContext
 
 void TSocket::Send(std::shared_ptr<OMessage> pMessage)
 {
-    mIOContext.post([this, pMessage]()
+    auto self = shared_from_this();
+    mIOContext.post([this, self, pMessage]()
     {
         if(mPendingMessages.empty())
         {
@@ -29,33 +32,33 @@ void TSocket::DoRead()
 {
     auto self(shared_from_this());
     auto pMessage = std::make_shared<OMessage>();
-    mSocket.async_read(boost::asio::buffer(pMessage.get(), pMessage->GetHeadLength()),
-         [this, self](boost::system::error_code ec, std::size_t bytes_transferred)
+    boost::asio::async_read(mSocket, boost::asio::buffer(pMessage.get(), pMessage->GetHeadLength()),
+         [this, self, pMessage](boost::system::error_code ec, std::size_t bytes_transferred)
          {
             if (!ec)
             {
-                mMessageHandler->ToHost();
-　　　　　　　　　if(0 == pMessage->GetBodyLength())
-               {
-                   DoRead();
-                   mMessageHandler->OnMessage(pMessage);
-               }
-               else
-               {
-                   mSocket.async_read(pMessage->GetReceiveBuffer(),
-                        [this, self](boost::system::error_code ec, std::size_t bytes_transferred)
-                        {
-                           if (!ec)
-                           {
-                               DoRead();
-                               mMessageHandler->OnMessage(pMessage);
-                           }
-                           else if (ec != boost::asio::error::operation_aborted)
-                           {
-                               mManager.lock()->Stop(shared_from_this());
-                           }
-                       });
-               }
+                pMessage->ToHost();
+                if(0 == pMessage->GetBodyLength())
+                {
+                    DoRead();
+                    mMessageHandler->OnMessage(pMessage);
+                }
+                else
+                {
+                    boost::asio::async_read(mSocket, pMessage->GetReceiveBuffer(),
+                         [this, self, pMessage](boost::system::error_code ec, std::size_t bytes_transferred)
+                         {
+                            if (!ec)
+                            {
+                                DoRead();
+                                mMessageHandler->OnMessage(pMessage);
+                            }
+                            else if (ec != boost::asio::error::operation_aborted)
+                            {
+                                mManager.lock()->Stop(shared_from_this());
+                            }
+                        });
+                }
             }
             else if (ec != boost::asio::error::operation_aborted)
             {

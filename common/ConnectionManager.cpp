@@ -16,7 +16,7 @@ void ConnectionManager::StopAll()
 {
     for(auto pConnection : mConnections)
     {
-        pConnection->stop();
+        pConnection->Stop();
     }
 
     mConnections.clear();

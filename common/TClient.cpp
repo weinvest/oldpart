@@ -1,3 +1,4 @@
+#include <boost/asio/connect.hpp>
 #include "TClient.h"
 
 TClient::TClient(boost::asio::io_context& ioContext
@@ -9,10 +10,10 @@ TClient::TClient(boost::asio::io_context& ioContext
 
 void TClient::Connect(const std::string& address, const std::string& port)
 {
-    tcp::resolver resolver(mIOContext);
-    tcp::resolver::results_type endpoints = resolver.resolve(address, port);
+    boost::asio::ip::tcp::resolver resolver(mIOContext);
+    boost::asio::ip::tcp::resolver::results_type endpoints = resolver.resolve(address, port);
     mSocket = std::make_shared<TSocket>(mIOContext, shared_from_this(), mMessageHandler);
-    boost::asio::connect(mSocket->GetSocket(), endPoints);
+    boost::asio::connect(mSocket->GetSocket(), endpoints);
 }
 
 void TClient::Send(std::shared_ptr<OMessage>& pMessage)

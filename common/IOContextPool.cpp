@@ -26,7 +26,7 @@ void IOContextPool::Run()
     for (std::size_t i = 0; i < io_contexts_.size(); ++i)
     {
         std::shared_ptr<std::thread> thread(new std::thread(
-              boost::bind(&boost::asio::io_context::run, io_contexts_[i])));
+              [this, i]{ io_contexts_[i]->run(); }));
         threads.push_back(thread);
     }
 
@@ -46,7 +46,7 @@ void IOContextPool::Stop()
     }
 }
 
-boost::asio::io_context& IOContextPool::get_io_context()
+boost::asio::io_context& IOContextPool::GetIOContext()
 {
     // Use a round-robin scheme to choose the next io_context to use.
     boost::asio::io_context& io_context = *io_contexts_[next_io_context_];

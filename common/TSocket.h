@@ -1,10 +1,12 @@
 #ifndef _OLDPART_TSOCKET_H
 #define _OLDPART_TSOCKET_H
 #include <memory>
+#include <queue>
 #include "common/OMessage.h"
 #include <boost/asio/ip/tcp.hpp>
 namespace boost { namespace asio { class io_context; } }
 
+class IConnectionManager;
 class TSocket: public std::enable_shared_from_this<TSocket>
 {
 public:
@@ -38,7 +40,7 @@ private:
     boost::asio::ip::tcp::socket mSocket;
     std::weak_ptr<IConnectionManager> mManager;
     std::shared_ptr<MessageHandler> mMessageHandler;
-    std::deque<std::shared_ptr<DMessage>> mPendingMessages;
+    std::deque<std::shared_ptr<OMessage>> mPendingMessages;
     bool mIsInSending{false};
 };
 #endif /* end of include guard: _OLDPART_TSOCKET_H */

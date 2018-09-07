@@ -53,7 +53,7 @@ void MSocket::DoReceive()
 
 boost::asio::io_context& MSocket::GetExecutor( void )
 {
-    return mSocket.get_executor();
+    return mSocket.get_io_context();
 }
 
 MSocket::~MSocket()
