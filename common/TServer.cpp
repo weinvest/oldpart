@@ -61,8 +61,8 @@ void TServer::DoAccept()
 
         if (!ec)
         {
-	    auto remote_endpoint = pClient->GetSocket().remote_endpoint();
-            auto clientName = mConnectionManager->FindInMapping(remote_endpoint.address().to_v4().to_ulong(), remote_endpoint.port());
+	        auto remote_endpoint = pClient->GetSocket().remote_endpoint();
+            auto clientName = mConnectionManager->FindInMapping(remote_endpoint.address().to_v4().to_uint(), remote_endpoint.port());
             mClients.insert(std::make_pair(clientName, pClient));
             mConnectionManager->Start(pClient);
         }

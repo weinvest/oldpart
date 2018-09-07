@@ -1,5 +1,6 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/udp.hpp>
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/program_options.hpp>
 #include <array>
@@ -58,7 +59,7 @@ public:
         response.magic = -1;
         response.ip = mIP;
         response.port = 0; //TODO
-        response.name = mName;
+        strncpy(response.name, mName, sizeof(response.name)-1);
         mSocket->Send(response);
     }
 
@@ -113,10 +114,10 @@ int main(int argc, char** argv)
             return 0;
         }
 
-        if(!(vm.count("name") && vm.count("ip") && vm.count(mip) && vm.count("mport")))
+        if(!(vm.count("name") && vm.count("ip") && vm.count("mip") && vm.count("mport")))
         {
             std::cout<<opts<<std::endl;
-            retunr -1;
+            return -1;
         }
 
         boost::asio::io_context io_context;
@@ -129,14 +130,14 @@ int main(int argc, char** argv)
         auto mip = vm["mip"].as<std::string>();
         auto mport = vm["mport"].as<uint16_t>();
         MSocket socket(io_context
-            , ip //listen address
-            , mip //multicast address
+            , boost::asio::ip::make_address(ip) //listen address
+            , boost::asio::ip::make_address(mip) //multicast address
             , mport); //multicast port
 
         boost::asio::ip::tcp::resolver resolver(io_context);
-        auto endpoint = resolver.resolve(ip, 22).begin();
+	    boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve(ip, std::to_string(22)).begin();
 
-        FindOrganization server(&socket, endpoint..address().to_v4().to_uint(), name.c_str());
+        FindOrganization server(&socket, endpoint.address().to_v4().to_uint(), name.c_str());
 
         // Register signal handlers so that the daemon may be shut down. You may
         // also want to register for other signals, such as SIGHUP to trigger a
@@ -162,7 +163,7 @@ int main(int argc, char** argv)
         // Fork the process and have the parent exit. If the process was started
         // from a shell, this returns control to the user. Forking a new process is
         // also a prerequisite for the subsequent call to setsid().
-        SysLogger logGuard("dfc-opc", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1, LOG_USER);
+        SysLogger logGuard("dfc-opc", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
         if (pid_t pid = fork())
         {
             if (pid > 0)
