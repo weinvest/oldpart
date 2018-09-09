@@ -9,16 +9,16 @@ void test_encrypt2_decrytp1(const char* key)
     int32_t len = s1.length() + s2.length();
     int32_t padNum(0);
     char outEncrypt[len+1];
-    auto r1 = AESEncrypt(outEncrypt, key, s1.c_str(), padNum);
+    auto r1 = AESEncrypt(outEncrypt, s1.length(), key, s1.c_str(), s1.length(), padNum);
     assert(r1);
     assert(0==padNum);
-    auto r2 = AESEncrypt(outEncrypt+s1.length(), key, s2.c_str(), padNum);
+    auto r2 = AESEncrypt(outEncrypt+s1.length(), s2.length(), key, s2.c_str(), s2.length(), padNum);
     assert(r2);
     assert(0==padNum);
 
     char outDecrypt[len+1];
     auto r3 = AESDecrypt(outDecrypt, len, key, outEncrypt, len, padNum)
-    std::cout << r3 << std::endl;
+    std::cout << outDecrypt << std::endl;
 }
 
 void test_encrytp1_decrypt2(const char* key)
