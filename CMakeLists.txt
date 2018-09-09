@@ -16,8 +16,8 @@ LINK_DIRECTORIES($ENV{BOOST_LIB_PATH})
 
 add_subdirectory(common)
 add_subdirectory(opc)
-
 add_subdirectory(ops)
+add_subdirectory(test)
 
 FILE(GLOB_RECURSE ${TARGET}_HEADER_LISTS "*.h" "*.hpp")
 INSTALL_FILES(include ${TARGET}_HEADER_LISTS)

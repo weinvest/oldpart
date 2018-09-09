@@ -10,7 +10,7 @@
 #include <boost/filesystem.hpp>
 #include<openssl/aes.h>
 #include<string.h>
-#include<malloc.h>
+//#include<malloc.h>
 using namespace std;
 
 
