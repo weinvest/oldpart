@@ -1,13 +1,5 @@
+#include <arpa/inet.h>
 #include "common/OMessage.h"
-void OMessage::ToHost( void )
-{
-
-}
-
-void OMessage::ToNet( void )
-{
-
-}
 
 OMessage::ReceiveBuffer OMessage::GetReceiveBuffer()
 {
@@ -31,3 +23,4 @@ OMessage::SendBuffer OMessage::GetSendBuffer()
 
     return bufs;
 }
+

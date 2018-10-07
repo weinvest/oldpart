@@ -37,7 +37,6 @@ void TSocket::DoRead()
          {
             if (!ec)
             {
-                pMessage->ToHost();
                 if(0 == pMessage->GetBodyLength())
                 {
                     DoRead();

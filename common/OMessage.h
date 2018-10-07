@@ -3,22 +3,44 @@
 #include <memory>
 #include <stddef.h>
 #include <boost/asio/buffer.hpp>
+#include <boost/endian/buffers.hpp>
+enum class SerializeMethod
+{
+    None = 0,
+    Compress = 1,
+    Encrypt = 2
+};
+
+using bint8_t = boost::endian::big_int8_buf_at;
+using bint16_t = boost::endian::big_int16_buf_at;
+using bint32_t = boost::endian::big_int32_buf_at;
+using bint64_t = boost::endian::big_int64_buf_at;
+
+using ubint8_t = boost::endian::big_uint8_buf_at;
+using ubint16_t = boost::endian::big_uint16_buf_at;
+using ubint32_t = boost::endian::big_uint32_buf_at;
+using ubint64_t = boost::endian::big_uint64_buf_at;
+
 struct OMessage
 {
-    int32_t length;
+    bint32_t length;
     union {
-        int32_t version;
+        bint32_t version;
         struct {
-            int16_t major;
-            int16_t minor;
+            bint16_t major;
+            bint16_t minor;
         };
     };
-    int32_t sequenceId;
-    int32_t messageId; //meesage type
-    int32_t messageSequenceId; //一个大的Message可以被分成多个小的OMessage, 这样的OMessage从０开始编号, <0表示最后一个OMessage
+    bint32_t sequenceId;
+    bint32_t messageId; //meesage type
+    bint32_t messageSequenceId; //一个大的Message可以被分成多个小的OMessage, 这样的OMessage从０开始编号, <0表示最后一个OMessage
+    bint32_t bodySerializeMethod;
 
     int32_t GetHeadLength() const { return (int32_t)offsetof(OMessage, mBody); }
-    int32_t GetBodyLength() const { return length - GetHeadLength(); }
+    int32_t GetBodyLength() const { return length.value() - GetHeadLength(); }
+    
+    bool IsCompressed() const { return 0 != (bodySerializeMethod & SerializeMethod::Compress); }
+    bool IsEncrypted() const { return 0 != (bodySerializeMethod & SerializeMethod::Encrypt); }
 
     typedef boost::asio::mutable_buffers_1 ReceiveBuffer;
     ReceiveBuffer GetReceiveBuffer();
@@ -32,9 +54,6 @@ struct OMessage
     void SetBody(uint8_t* body) { mBody = body; }
 
     void SetData(DataT pData) { mData = pData; }
-
-    void ToHost( void );
-    void ToNet( void );
 
     uint8_t* mBody{nullptr};
     DataT mData;
