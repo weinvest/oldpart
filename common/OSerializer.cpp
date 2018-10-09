@@ -1,4 +1,5 @@
 #include "OSerializer.h"
+#include "crypto/DfcCrypto.h"
 OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj)
 {
     return MakeMessageFromBuf(messageId, SerializeMethod::None, obj, [](auto& sink) { obj.Write(sink, nullptr, 0); }));
@@ -48,7 +49,11 @@ void OSerializer::EncryptBuf(OProtoBase::Coro::pull_type& sink, std::function<vo
     auto bufPull = OProtoBase::Core::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
     for(auto body : bufPull)
     {
-
+        auto pEncyptBuf = new uint8_t[MAX_MESSAGE_BODY_LENGTH];
+        int32_t encryptLen = 0;
+        int32_t padNum = 0;
+        AESEncrypt(pEncyptBuf, encryptLen, key, body.second, body.first, padNum);
+        sink(std::make_pair(encryptLen, pEncryptBuf));
     }
 }
 
