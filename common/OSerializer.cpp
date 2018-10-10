@@ -1,41 +1,49 @@
 #include "OSerializer.h"
 #include "crypto/DfcCrypto.h"
+template <typename T>
+std::shared_ptr<T> make_shared_array(size_t size)
+{
+    return std::shared_ptr<T>(new T[size], std::default_delete<T[]>());
+}
+
 OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj)
 {
     return MakeMessageFromBuf(messageId, SerializeMethod::None, obj, [](auto& sink) { obj.Write(sink, nullptr, 0); }));
 }
 
-OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, const SerializeCompressOnly&)
+OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int32_t compressLevel)
 {
     return MakeMessageFromBuf(messageId, obj
         , SerializeMethod::Compress
-        , [](auto& sink)
+        , [compressLevel](auto& sink)
         {
-            CompressBuf(sink, [](auto& sink) { obj.Write(sink, nullptr, 0); });
+            CompressBuf(sink, compressLevel, [](auto& sink) { obj.Write(sink, nullptr, 0); });
         }));
 }
 
-OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, const SerializeEncryptOnly&)
+OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, const std::string& key)
 {
     return MakeMessageFromBuf(messageId, obj
         , SerializeMethod::Encrypt
-        , [](auto& sink)
+        , [&](auto& sink)
         {
-            EncyptBuf(sink, [](auto& sink) { obj.Write(sink, nullptr, 0); });
+            EncyptBuf(sink, key, [](auto& sink) { obj.Write(sink, nullptr, 0); });
         }));
 }
 
-OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, const SerializeCompressThenEncrypt&)
+OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int32_t compressLevel, const std::string& key)
 {
     return MakeMessageFromBuf(messageId, obj
         , SerializeMethod::Compress|SerializeMethod::Encrypt
-        , [](auto& sink)
+        , [&](auto& sink)
         {
-            EncyptBuf(sink, [](auto& sink) { EncyptBuf(sink, [](auto& sink1) { obj.Write(sink1, nullptr, 0); }) });
+            CompressBuf(sink, compressLevel, [&](auto& sink) { EncyptBuf(sink, key, [](auto& sink1) { obj.Write(sink1, nullptr, 0); }) });
         }));
 }
 
-void OSerializer::CompressBuf(OProtoBase::Coro::pull_type& sink, std::function<void(OProtoBase::Core::push_type&)> bufFunc)
+void OSerializer::CompressBuf(OProtoBase::Coro::pull_type& sink
+    , int32_t level
+    , std::function<void(OProtoBase::Core::push_type&)> bufFunc)
 {
     auto bufPull = OProtoBase::Core::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
     for(auto body : bufPull)
@@ -44,15 +52,17 @@ void OSerializer::CompressBuf(OProtoBase::Coro::pull_type& sink, std::function<v
     }
 }
 
-void OSerializer::EncryptBuf(OProtoBase::Coro::pull_type& sink, std::function<void(OProtoBase::Core::push_type&)> bufFunc)
+void OSerializer::EncryptBuf(OProtoBase::Coro::pull_type& sink
+    , const std::string& key
+    , std::function<void(OProtoBase::Core::push_type&)> bufFunc)
 {
     auto bufPull = OProtoBase::Core::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
     for(auto body : bufPull)
     {
-        auto pEncyptBuf = new uint8_t[MAX_MESSAGE_BODY_LENGTH];
+        auto pEncyptBuf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
         int32_t encryptLen = 0;
         int32_t padNum = 0;
-        AESEncrypt(pEncyptBuf, encryptLen, key, body.second, body.first, padNum);
+        AESEncrypt(pEncyptBuf.get(), encryptLen, key, body.second.get(), body.first, padNum);
         sink(std::make_pair(encryptLen, pEncryptBuf));
     }
 }
@@ -87,7 +97,7 @@ OMessageCoro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
     });
 }
 
-uint8_t* OSerializer::EnsureBuffer(OProtoBase::Coro::push_type& yield, uint8_t* buf, int32_t& offset)
+std::shared_ptr<uint8_t> OSerializer::EnsureBuffer(OProtoBase::Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t& offset)
 {
     auto totalLength = offset + sizeof(T);
     if(totalLength > MAX_MESSAGE_BODY_LENGTH)
@@ -99,7 +109,7 @@ uint8_t* OSerializer::EnsureBuffer(OProtoBase::Coro::push_type& yield, uint8_t* 
 
     if(nullptr == buf)
     {
-        buf = new uint8_t[MAX_MESSAGE_BODY_LENGTH];
+        buf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
         offset = 0;
     }
 
