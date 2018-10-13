@@ -64,6 +64,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
 
             if(compressedBuf.IsFull())
             {
+                compressedBuf.CompressEnd();
                 sink(std::make_tuple(compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0));
                 compressedBuf.Reset(make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH), MAX_MESSAGE_BODY_LENGTH, level);
             }
@@ -72,6 +73,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
 
     if(compressedBuf.IsEmpty())
     {
+        compressedBuf.CompressEnd();
         sink(std::make_tuple(compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0));
     }
 }

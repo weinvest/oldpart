@@ -1,16 +1,16 @@
-#ifndef _OLDPART_ZLIBCOMPRESS_BUF_H
-#define _OLDPART_ZLIBCOMPRESS_BUF_H
-#include <cstdint>
+#ifndef _OLDPART_ZLIBUNCOMPRESS_BUF_H
+#define _OLDPART_ZLIBUNCOMPRESS_BUF_H
+
 #include <memory>
+#include <cstdint>
 #include <zlib.h>
-class ZLibCompressBuf
+class ZLibUnCompressBuf
 {
 public:
-    ZLibCompressBuf(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level);
+    ZLibUnCompressBuf(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level);
     void Reset(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level);
 
-    int32_t Compress(uint8_t* inBuf, int32_t inLen);
-    void CompressEnd( void );
+    int32_t UnCompress(uint8_t* inBuf, int32_t inLen);
 
     auto GetOutLen( void ) const { return mStrm.avail_out; }
     auto GetOutBuf( void ) { return mOutBuf; }
@@ -24,5 +24,4 @@ private:
 
     z_stream mStrm;
 };
-
-#endif /* end of include guard: _OLDPART_ZLIBCOMPRESS_BUF_H */
+#endif //_OLDPART_ZLIBUNCOMPRESS_BUF_H
