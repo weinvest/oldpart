@@ -4,11 +4,15 @@
 #include <stddef.h>
 #include <boost/asio/buffer.hpp>
 #include <boost/endian/buffers.hpp>
-enum class SerializeMethod
+
+struct SerializeMethod
 {
-    None = 0,
-    Compress = 1,
-    Encrypt = 2
+    enum type
+    {
+        None = 0,
+        Compress = 1,
+        Encrypt = 2
+   };
 };
 
 using bint8_t = boost::endian::big_int8_buf_at;
@@ -38,9 +42,9 @@ struct OMessage
 
     int32_t GetHeadLength() const { return (int32_t)offsetof(OMessage, mBody); }
     int32_t GetBodyLength() const { return length.value() - GetHeadLength(); }
-    
-    bool IsCompressed() const { return 0 != (bodySerializeMethod & SerializeMethod::Compress); }
-    bool IsEncrypted() const { return 0 != (bodySerializeMethod & SerializeMethod::Encrypt); }
+
+    bool IsCompressed() const { return 0 != (bodySerializeMethod.value() & SerializeMethod::Compress); }
+    bool IsEncrypted() const { return 0 != (bodySerializeMethod.value() & SerializeMethod::Encrypt); }
 
     typedef boost::asio::mutable_buffers_1 ReceiveBuffer;
     ReceiveBuffer GetReceiveBuffer();

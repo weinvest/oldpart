@@ -2,48 +2,46 @@
 #define _OLDPART_OSERIALIZER_H
 #include <memory>
 #include <atomic>
-#include <boost/coroutines2/all.hpp>
-#include <<boost/call_traits.hpp>
+#include <boost/coroutine2/all.hpp>
+#include <boost/call_traits.hpp>
 #include "common/OProtoBase.h"
 
-class SerializeCompressOnly{};
-class SerializeEncryptOnly{};
-class SerializeCompressThenEncrypt{};
-
+class OMessage;
 class OSerializer
 {
 public:
     typedef std::shared_ptr<OMessage> OMessagePtr;
-    typedef std::shared_ptr<>;
     typedef boost::coroutines2::coroutine<OMessagePtr> OMessageCoro;
 
-    constexpr int32_t MAX_MESSAGE_BODY_LENGTH = 1<<21;
+    static constexpr int32_t MAX_MESSAGE_BODY_LENGTH = 1<<21;
 
     OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj);
-    OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj, const SerializeCompressOnly&);
-    OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj, const SerializeEncryptOnly&);
-    OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj, const SerializeCompressThenEncrypt&);
+    OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
+        , int32_t compressLevel);
+    OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
+        , const std::string& key);
+    OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
+        , int32_t compressLevel, const std::string& key);
 
     template<typename T>
     int32_t WritePOD(OProtoBase::Coro::push_type& yield
-        , uint8_t* buf
+        , std::shared_ptr<uint8_t> buf
         , int32_t offset
-        , boost::call_traits<T>::param_typeT v)
+        , typename boost::call_traits<T>::param_type v)
     {
-        buf = EnsureBuffer(yield, buf, offset);
-        memcpy(buf+offset, &v, sizeof(v));
+        buf = EnsureBuffer(yield, buf, offset, sizeof(T));
+        memcpy(buf.get()+offset, &v, sizeof(v));
         return offset+sizeof(v);
     }
 
 private:
-    uint8_t* EnsureBuffer(OProtoBase::Coro::push_type& yield, uint8_t* buf, int32_t& offset);
+    std::shared_ptr<uint8_t> EnsureBuffer(OProtoBase::Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t& offset, int32_t eleSize);
     OMessageCoro::pull_type MakeMessageFromBuf(int32_t messageId
         , int32_t serializeMethod
-        , const OProtoBase& obj
-        , std::function<void(OProtoBase::Core::push_type&)> bufFunc);
+        , std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
 
-    void CompressBuf(OProtoBase::Coro::pull_type& sink, std::function<void(OProtoBase::Core::push_type&)> bufFunc);
-    void EncryptBuf(OProtoBase::Coro::pull_type& sink, std::function<void(OProtoBase::Core::push_type&)> bufFunc);
+    void CompressBuf(OProtoBase::Coro::push_type& sink, int32_t level, std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
+    void EncryptBuf(OProtoBase::Coro::push_type& sink, const std::string& key, std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
 
     static constexpr int16_t MESSAGE_MAJOR_VERSION = 1;
     static constexpr int16_t MESSAGE_MINOR_VERSION = 1;
