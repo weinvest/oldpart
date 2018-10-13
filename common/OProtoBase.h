@@ -1,6 +1,6 @@
 #ifndef _OLDPART_OPROTO_BASE_H
 #define _OLDPART_OPROTO_BASE_H
-#include <utility>
+#include <tuple>
 #include <boost/coroutines2/all.hpp>
 
 class OProtoBase

@@ -53,7 +53,7 @@ void OSerializer::EncryptBuf(OProtoBase::Coro::pull_type& sink, std::function<vo
         int32_t encryptLen = 0;
         int32_t padNum = 0;
         AESEncrypt(pEncyptBuf, encryptLen, key, body.second, body.first, padNum);
-        sink(std::make_pair(encryptLen, pEncryptBuf));
+        sink(std::make_tuple(encryptLen, pEncryptBuf));
     }
 }
 
