@@ -34,6 +34,13 @@ public:
         return offset+sizeof(v);
     }
 
+    bool Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull);
+
+    bool RegisteProtoCreator(int32_t messageId
+        , std::function<OProtoBase*()> requestCreator
+        , std::function<OProtoBase*()> responseCreator);
+
+    OProtoBase* CreateProto(int32_t messageId);
 private:
     std::shared_ptr<uint8_t> EnsureBuffer(OProtoBase::Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t& offset, int32_t eleSize);
     OMessageCoro::pull_type MakeMessageFromBuf(int32_t messageId
@@ -46,6 +53,13 @@ private:
     static constexpr int16_t MESSAGE_MAJOR_VERSION = 1;
     static constexpr int16_t MESSAGE_MINOR_VERSION = 1;
     std::atomic_int mMessageSequenceId{0};
+
+    struct ProtoCreator
+    {
+        std::function<OProtoBase*()> requestCreator;
+        std::function<OProtoBase*()> responseCreator;
+    };
+    std::unordered_map<int32_t, ProtoCreator> mProtoCreators;
 };
 
 #endif //_OLDPART_OSERIALIZER_H

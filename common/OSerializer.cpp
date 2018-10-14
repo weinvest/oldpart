@@ -140,3 +140,68 @@ std::shared_ptr<uint8_t> OSerializer::EnsureBuffer(OProtoBase::Coro::push_type& 
 
     return buf;
 }
+
+bool OSerializer::RegisteProtoCreator(int32_t messageId
+    , std::function<OProtoBase*()> requestCreator
+    , std::function<OProtoBase*()> responseCreator)
+{
+    auto insertResult = mProtoCreators.insert(std::make_pair(messageId, {requestCreator, responseCreator}));
+    return insertResult.second;
+}
+
+OProtoBase* OSerializer::CreateProto(int32_t messageId)
+{
+    auto itCreator = mProtoCreators.find(messageId);
+    if(itCreator == mProtoCreators.end())
+    {
+        return nullptr;
+    }
+
+    if(messageId > 0)
+    {
+        if(itCreator->second.requestCreator)
+        {
+            return itCreator->second.requestCreator();
+        }
+
+        return nullptr;
+    }
+    else
+    {
+        if(itCreator->second.responseCreator)
+        {
+            return itCreator->second.responseCreator();
+        }
+
+        return nullptr;
+    }
+}
+
+bool OSerializer::Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull)
+{
+    auto pMessage = pull.get();
+    pProto = CreateProto(pMessage->GetMessageId());
+    if(nullptr == pProto)
+    {
+        return false;
+    }
+
+    do
+    {
+        pMessage = pull.get();
+        auto pBuf = pMessage->GetData();
+        auto bufLen = pMessage->GetBodyLength();
+        if(pMessage->IsEncrypted())
+        {
+            auto pDecryptedBuf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
+            AESDecrypt(pDecryptedBuf.get(), bufLen, key, pBuf.get(), bufLen, pMessage->GetPadNum());
+            pBuf = pDecryptedBuf;
+        }
+
+        if(pMessage->IsCompressed())
+        {
+            
+        }
+        pull();
+    }while(pull);
+}
