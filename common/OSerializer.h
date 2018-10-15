@@ -11,19 +11,19 @@ class OSerializer
 {
 public:
     typedef std::shared_ptr<OMessage> OMessagePtr;
-    typedef boost::coroutines2::coroutine<OMessagePtr> OMessageCoro;
+    typedef boost::coroutines2::coroutine<const OMessagePtr> Coro;
 
     static constexpr int32_t MAX_MESSAGE_BODY_LENGTH = 1<<21;
 
-    OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj);
-    OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
+    Coro::pull_type Serialize(int32_t messageId, const OProtoBase& obj);
+    Coro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
         , int8_t compressLevel);
-    OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
+    Coro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
         , const std::string& key);
-    OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
+    Coro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
         , int8_t compressLevel, const std::string& key);
 
-    bool Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull, const std::string& key);
+    bool Deserialize(OProtoBase*& pProto, Coro::pull_type& pull, const std::string& key);
 
     bool RegisteProtoCreator(int32_t messageId
         , std::function<OProtoBase*()> requestCreator
@@ -31,7 +31,7 @@ public:
 
     OProtoBase* CreateProto(int32_t messageId);
 private:
-    OMessageCoro::pull_type MakeMessageFromBuf(int32_t messageId
+    Coro::pull_type MakeMessageFromBuf(int32_t messageId
         , int32_t serializeMethod
         , int8_t compressLevel
         , std::function<void(OProtoBase::Coro::push_type&)> bufFunc);

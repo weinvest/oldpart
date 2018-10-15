@@ -7,6 +7,8 @@
 namespace boost { namespace asio { class io_context; } }
 
 class IConnectionManager;
+class OProtoBase;
+class OSerializer;
 class TSocket: public std::enable_shared_from_this<TSocket>
 {
 public:
@@ -15,7 +17,8 @@ public:
     public:
         virtual ~MessageHandler() {}
 
-        virtual void OnMessage(const std::shared_ptr<OMessage>& discover) = 0;
+        virtual bool OnMessage(const std::shared_ptr<OMessage>& discover) { return false; }
+        virtual void OnMessage(OProtoBase* pMessage) = 0;
     };
 
     TSocket(const TSocket&) = delete;
@@ -27,8 +30,13 @@ public:
 
     auto& GetSocket() { return mSocket; }
     auto& GetExecutor() { return mIOContext; }
-    void Send(std::shared_ptr<OMessage> pMessage);
 
+    void SetSerializer(OSerializer* pSerializer) { mSerializer = pSerializer; }
+    void SetEncryptKey(const std::string& key) { mEncryptKey = key; }
+    void SetCompressLevel(int8_t compressLevel) { mCompressLevel = compressLevel; }
+
+    void Send(std::shared_ptr<OMessage> pMessage);
+    void Send(int32_t messageId, int32_t requestId, const OProtoBase& pProto);
     void Start();
     void Stop();
 private:
@@ -42,5 +50,8 @@ private:
     std::shared_ptr<MessageHandler> mMessageHandler;
     std::deque<std::shared_ptr<OMessage>> mPendingMessages;
     bool mIsInSending{false};
+    OSerializer* mSerializer{nullptr};
+    std::string mEncryptKey;
+    int8_t mCompressLevel{0};
 };
 #endif /* end of include guard: _OLDPART_TSOCKET_H */

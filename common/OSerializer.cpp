@@ -10,12 +10,12 @@ std::shared_ptr<T> make_shared_array(size_t size)
     return std::shared_ptr<T>(new T[size], std::default_delete<T[]>());
 }
 
-OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj)
+OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj)
 {
     return MakeMessageFromBuf(messageId, SerializeMethod::None, 0, [&obj](auto& sink) { obj.Write(sink, nullptr, 0); });
 }
 
-OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int8_t compressLevel)
+OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int8_t compressLevel)
 {
     return MakeMessageFromBuf(messageId
         , SerializeMethod::Compress
@@ -26,7 +26,7 @@ OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, c
         });
 }
 
-OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, const std::string& key)
+OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, const std::string& key)
 {
     return MakeMessageFromBuf(messageId
         , SerializeMethod::Encrypt
@@ -37,7 +37,7 @@ OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, c
         });
 }
 
-OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int8_t compressLevel, const std::string& key)
+OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int8_t compressLevel, const std::string& key)
 {
     return MakeMessageFromBuf(messageId
         , SerializeMethod::Compress|SerializeMethod::Encrypt
@@ -97,15 +97,15 @@ void OSerializer::EncryptBuf(OProtoBase::Coro::push_type& sink
     }
 }
 
-OSerializer::OMessageCoro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
+OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
     , int32_t serializeMethod
     , int8_t compressLevel
     , std::function<void(OProtoBase::Coro::push_type&)> bufFunc)
 {
-    return OMessageCoro::pull_type(boost::coroutines2::fixedsize_stack(),
-    [&](OMessageCoro::push_type& mesgSink)
+    return Coro::pull_type(boost::coroutines2::fixedsize_stack(),
+    [&](Coro::push_type& mesgSink)
     {
-        int32_t messageSequenceId = 0;
+        int32_t messageSequenceId = 1;
         auto bufPull = OProtoBase::Coro::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
         for(auto body : bufPull)
         {
@@ -166,7 +166,7 @@ OProtoBase* OSerializer::CreateProto(int32_t messageId)
     }
 }
 
-bool OSerializer::Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull, const std::string& key)
+bool OSerializer::Deserialize(OProtoBase*& pProto, Coro::pull_type& pull, const std::string& key)
 {
     auto pMessage = pull.get();
     pProto = CreateProto(pMessage->GetMessageId());
