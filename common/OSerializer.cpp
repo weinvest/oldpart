@@ -59,7 +59,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
     {
         auto inBuf = std::get<0>(body).get();
         auto inLen = std::get<1>(body);
-
+        assert(inLen <= MAX_MESSAGE_BODY_LENGTH);
         while(inLen > 0)
         {
             auto compressedLen = compressedBuf.Compress(inBuf, inLen);
@@ -129,24 +129,6 @@ OSerializer::OMessageCoro::pull_type OSerializer::MakeMessageFromBuf(int32_t mes
     });
 }
 
-std::shared_ptr<uint8_t> OSerializer::EnsureBuffer(OProtoBase::Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t& offset, int32_t eleSize)
-{
-    auto totalLength = offset + eleSize;
-    if(totalLength > MAX_MESSAGE_BODY_LENGTH)
-    {
-        yield(std::make_tuple(buf, offset, 0));
-        buf = nullptr;
-        offset = 0;
-    }
-
-    if(nullptr == buf)
-    {
-        buf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
-        offset = 0;
-    }
-
-    return buf;
-}
 
 bool OSerializer::RegisteProtoCreator(int32_t messageId
     , std::function<OProtoBase*()> requestCreator
@@ -195,7 +177,7 @@ bool OSerializer::Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull
 
     OProtoBase::Coro::push_type sink([pProto](auto& pull)
     {
-        pProto->Read(pull);
+        pProto->Read(pull, nullptr, 0);
     });
 
     do

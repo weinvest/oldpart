@@ -4,7 +4,6 @@
 #include <atomic>
 #include <unordered_map>
 #include <boost/coroutine2/all.hpp>
-#include <boost/call_traits.hpp>
 #include "common/OProtoBase.h"
 
 class OMessage;
@@ -24,17 +23,6 @@ public:
     OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
         , int8_t compressLevel, const std::string& key);
 
-    template<typename T>
-    int32_t WritePOD(OProtoBase::Coro::push_type& yield
-        , std::shared_ptr<uint8_t> buf
-        , int32_t offset
-        , typename boost::call_traits<T>::param_type v)
-    {
-        buf = EnsureBuffer(yield, buf, offset, sizeof(T));
-        memcpy(buf.get()+offset, &v, sizeof(v));
-        return offset+sizeof(v);
-    }
-
     bool Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull, const std::string& key);
 
     bool RegisteProtoCreator(int32_t messageId
@@ -43,7 +31,6 @@ public:
 
     OProtoBase* CreateProto(int32_t messageId);
 private:
-    std::shared_ptr<uint8_t> EnsureBuffer(OProtoBase::Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t& offset, int32_t eleSize);
     OMessageCoro::pull_type MakeMessageFromBuf(int32_t messageId
         , int32_t serializeMethod
         , int8_t compressLevel
