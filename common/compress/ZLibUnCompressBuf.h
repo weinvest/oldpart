@@ -7,20 +7,19 @@
 class ZLibUnCompressBuf
 {
 public:
-    ZLibUnCompressBuf(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level);
-    void Reset(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level);
+    ZLibUnCompressBuf(std::shared_ptr<uint8_t> pInBuf, int32_t bufLen);
 
-    int32_t UnCompress(uint8_t* inBuf, int32_t inLen);
+    int32_t UnCompress(uint8_t* outBuf, int32_t outLen);
+    void UnCompressEnd();
 
-    auto GetOutLen( void ) const { return mStrm.avail_out; }
-    auto GetOutBuf( void ) { return mOutBuf; }
+    auto GetInLen( void ) const { return mStrm.avail_in; }
 
-    bool IsFull( void ) { return GetOutLen() == mOutBufCapacity;}
-    bool IsEmpty( void ) const { return 0 == GetOutLen(); }
+    bool IsFull( void ) { return GetInLen() == mInBufLen;}
+    bool IsEmpty( void ) const { return 0 == GetInLen(); }
 
 private:
-    std::shared_ptr<uint8_t> mOutBuf{nullptr};
-    int32_t mOutBufCapacity{0};
+    std::shared_ptr<uint8_t> mInBuf{nullptr};
+    int32_t mInBufLen{0};
 
     z_stream mStrm;
 };

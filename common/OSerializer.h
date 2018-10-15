@@ -2,6 +2,7 @@
 #define _OLDPART_OSERIALIZER_H
 #include <memory>
 #include <atomic>
+#include <unordered_map>
 #include <boost/coroutine2/all.hpp>
 #include <boost/call_traits.hpp>
 #include "common/OProtoBase.h"
@@ -17,11 +18,11 @@ public:
 
     OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj);
     OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
-        , int32_t compressLevel);
+        , int8_t compressLevel);
     OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
         , const std::string& key);
     OMessageCoro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
-        , int32_t compressLevel, const std::string& key);
+        , int8_t compressLevel, const std::string& key);
 
     template<typename T>
     int32_t WritePOD(OProtoBase::Coro::push_type& yield
@@ -34,7 +35,7 @@ public:
         return offset+sizeof(v);
     }
 
-    bool Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull);
+    bool Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull, const std::string& key);
 
     bool RegisteProtoCreator(int32_t messageId
         , std::function<OProtoBase*()> requestCreator
@@ -45,9 +46,10 @@ private:
     std::shared_ptr<uint8_t> EnsureBuffer(OProtoBase::Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t& offset, int32_t eleSize);
     OMessageCoro::pull_type MakeMessageFromBuf(int32_t messageId
         , int32_t serializeMethod
+        , int8_t compressLevel
         , std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
 
-    void CompressBuf(OProtoBase::Coro::push_type& sink, int32_t level, std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
+    void CompressBuf(OProtoBase::Coro::push_type& sink, int8_t level, std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
     void EncryptBuf(OProtoBase::Coro::push_type& sink, const std::string& key, std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
 
     static constexpr int16_t MESSAGE_MAJOR_VERSION = 1;

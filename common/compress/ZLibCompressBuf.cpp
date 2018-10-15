@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <string>
+#include <cassert>
 #include "ZLibCompressBuf.h"
 
 ZLibCompressBuf::ZLibCompressBuf(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level)

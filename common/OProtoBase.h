@@ -12,7 +12,7 @@ public:
     using BufT = std::tuple<std::shared_ptr<uint8_t>, int32_t, int32_t>;
     using Coro = boost::coroutines2::coroutine<BufT>;
     virtual void Write(Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t offset) const = 0;
-    virtual void Read(Coro::pull_type& source, std::shared_ptr<uint8_t> buf, int32_t offset) = 0;
+    virtual void Read(Coro::pull_type& source) = 0;
 };
 
 #define DECLARE_PROTO(pname) struct pname: public QProtoBase
@@ -24,7 +24,7 @@ public:
         BOOST_PP_SEQ_FOR_EACH_I(PROTO_WRITE_FIELD, ~, typeNamePair)\
         yield(std::make_tuple(buf, offset, 0));\
     }\
-    void Read(Coro::pull_type& source, std::shared_ptr<uint8_t> buf, int32_t offset) override\
+    void Read(Coro::pull_type& source) override\
     {\
     }
 #endif /* end of include guard: _OLDPART_OPROTO_BASE_H */

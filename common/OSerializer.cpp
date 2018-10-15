@@ -3,6 +3,7 @@
 #include "OMessage.h"
 #include "crypto/DfcCrypto.h"
 #include "compress/ZLibCompressBuf.h"
+#include "compress/ZLibUnCompressBuf.h"
 template <typename T>
 std::shared_ptr<T> make_shared_array(size_t size)
 {
@@ -11,13 +12,14 @@ std::shared_ptr<T> make_shared_array(size_t size)
 
 OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj)
 {
-    return MakeMessageFromBuf(messageId, SerializeMethod::None, [&obj](auto& sink) { obj.Write(sink, nullptr, 0); });
+    return MakeMessageFromBuf(messageId, SerializeMethod::None, 0, [&obj](auto& sink) { obj.Write(sink, nullptr, 0); });
 }
 
-OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int32_t compressLevel)
+OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int8_t compressLevel)
 {
     return MakeMessageFromBuf(messageId
         , SerializeMethod::Compress
+        , compressLevel
         , [compressLevel, &obj, this](OProtoBase::Coro::push_type& sink)
         {
             CompressBuf(sink, compressLevel, [&obj](OProtoBase::Coro::push_type& sink) { obj.Write(sink, nullptr, 0); });
@@ -28,16 +30,18 @@ OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, c
 {
     return MakeMessageFromBuf(messageId
         , SerializeMethod::Encrypt
+        , 0
         , [&, this](OProtoBase::Coro::push_type& sink)
         {
             EncryptBuf(sink, key, [&obj](auto& sink) { obj.Write(sink, nullptr, 0); });
         });
 }
 
-OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int32_t compressLevel, const std::string& key)
+OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int8_t compressLevel, const std::string& key)
 {
     return MakeMessageFromBuf(messageId
         , SerializeMethod::Compress|SerializeMethod::Encrypt
+        , compressLevel
         , [&, this, compressLevel](OProtoBase::Coro::push_type& sink)
         {
             CompressBuf(sink, compressLevel, [&, this](auto& sink) { EncryptBuf(sink, key, [&obj](auto& sink1) { obj.Write(sink1, nullptr, 0); });});
@@ -45,7 +49,7 @@ OSerializer::OMessageCoro::pull_type OSerializer::Serialize(int32_t messageId, c
 }
 
 void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
-    , int32_t level
+    , int8_t level
     , std::function<void(OProtoBase::Coro::push_type&)> bufFunc)
 {
     auto bufPull = OProtoBase::Coro::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
@@ -95,6 +99,7 @@ void OSerializer::EncryptBuf(OProtoBase::Coro::push_type& sink
 
 OSerializer::OMessageCoro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
     , int32_t serializeMethod
+    , int8_t compressLevel
     , std::function<void(OProtoBase::Coro::push_type&)> bufFunc)
 {
     return OMessageCoro::pull_type(boost::coroutines2::fixedsize_stack(),
@@ -109,10 +114,12 @@ OSerializer::OMessageCoro::pull_type OSerializer::MakeMessageFromBuf(int32_t mes
             pMessage->length = std::get<1>(body);
             pMessage->major = MESSAGE_MAJOR_VERSION;
             pMessage->minor = MESSAGE_MINOR_VERSION;
-            pMessage->sequenceId = mMessageSequenceId;
+            pMessage->sequenceId = mMessageSequenceId.fetch_add(1);
             pMessage->messageId = messageId; //meesage type
             pMessage->messageSequenceId = messageSequenceId++;
-            pMessage->bodySerializeMethod = serializeMethod | std::get<2>(body);
+            pMessage->bodySerializeMethod = serializeMethod;
+            pMessage->encryptPadNum = std::get<2>(body);
+            pMessage->compressLevel = compressLevel;
 
             pMessage->SetBody(std::get<0>(body).get());
             pMessage->SetData(std::get<0>(body));
@@ -145,7 +152,7 @@ bool OSerializer::RegisteProtoCreator(int32_t messageId
     , std::function<OProtoBase*()> requestCreator
     , std::function<OProtoBase*()> responseCreator)
 {
-    auto insertResult = mProtoCreators.insert(std::make_pair(messageId, {requestCreator, responseCreator}));
+    auto insertResult = mProtoCreators.insert(std::make_pair(messageId, ProtoCreator{requestCreator, responseCreator}));
     return insertResult.second;
 }
 
@@ -177,7 +184,7 @@ OProtoBase* OSerializer::CreateProto(int32_t messageId)
     }
 }
 
-bool OSerializer::Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull)
+bool OSerializer::Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull, const std::string& key)
 {
     auto pMessage = pull.get();
     pProto = CreateProto(pMessage->GetMessageId());
@@ -186,22 +193,42 @@ bool OSerializer::Deserailize(OProtoBase*& pProto, OMessageCoro::pull_type& pull
         return false;
     }
 
+    OProtoBase::Coro::push_type sink([pProto](auto& pull)
+    {
+        pProto->Read(pull);
+    });
+
     do
     {
         pMessage = pull.get();
-        auto pBuf = pMessage->GetData();
+        auto pBuf = std::static_pointer_cast<uint8_t>(pMessage->GetData());
         auto bufLen = pMessage->GetBodyLength();
         if(pMessage->IsEncrypted())
         {
             auto pDecryptedBuf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
-            AESDecrypt(pDecryptedBuf.get(), bufLen, key, pBuf.get(), bufLen, pMessage->GetPadNum());
+            AESDecrypt((char*)pDecryptedBuf.get(), bufLen, key, (char*)pBuf.get(), bufLen, pMessage->GetPadNum());
             pBuf = pDecryptedBuf;
         }
 
         if(pMessage->IsCompressed())
         {
-            
+            ZLibUnCompressBuf uncompressBuf(pBuf, bufLen);
+            while(!uncompressBuf.IsEmpty())
+            {
+                auto pUnCompressBuf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
+                auto compressLen = uncompressBuf.UnCompress(pUnCompressBuf.get(), MAX_MESSAGE_BODY_LENGTH);
+                sink(std::make_tuple(pUnCompressBuf, compressLen, 0));
+            }
+
+            uncompressBuf.UnCompressEnd();
         }
+        else
+        {
+            sink(std::make_tuple(pBuf, bufLen, 0));
+        }
+
         pull();
     }while(pull);
+
+    return true;
 }

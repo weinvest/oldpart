@@ -28,25 +28,26 @@ using ubint64_t = boost::endian::big_uint64_buf_at;
 struct OMessage
 {
     bint32_t length;
-    union {
-        bint32_t version;
-        struct {
-            bint16_t major;
-            bint16_t minor;
-        };
-    };
+
+    bint16_t major; // major version
+    bint16_t minor; // minor version
+
     bint32_t sequenceId;
     bint32_t messageId; //meesage type
-    bint32_t messageSequenceId; //一个大的Message可以被分成多个小的OMessage, 这样的OMessage从０开始编号, <0表示最后一个OMessage
-    bint32_t bodySerializeMethod;
+    bint32_t messageSequenceId{0}; //一个大的Message可以被分成多个小的OMessage, 这样的OMessage从０开始编号, <0表示最后一个OMessage
+    bint32_t requestId{0};
+    bint16_t bodySerializeMethod{0};
+    bint8_t compressLevel{0};
+    bint8_t encryptPadNum{0};
 
-    int32_t GetSequenceId() const { return sequenceId.value(); }
-    int32_t GetMessageId() const { return messageId.value(); }
-    int32_t GetMessageSequenceId() const { return messageSequenceId.value(); }
-    int32_t GetPadNum() const { return bodySerializeMethod.value() >> 16; }
+    auto GetSequenceId() const { return sequenceId.value(); }
+    auto GetMessageId() const { return messageId.value(); }
+    auto GetMessageSequenceId() const { return messageSequenceId.value(); }
+    auto GetPadNum() const { return encryptPadNum.value(); }
+    auto GetCompressLevel() const { return compressLevel.value(); }
 
-    int32_t GetHeadLength() const { return (int32_t)offsetof(OMessage, mBody); }
-    int32_t GetBodyLength() const { return length.value() - GetHeadLength(); }
+    auto GetHeadLength() const { return (int32_t)offsetof(OMessage, mBody); }
+    auto GetBodyLength() const { return length.value() - GetHeadLength(); }
 
     bool IsCompressed() const { return 0 != (bodySerializeMethod.value() & SerializeMethod::Compress); }
     bool IsEncrypted() const { return 0 != (bodySerializeMethod.value() & SerializeMethod::Encrypt); }
@@ -57,9 +58,9 @@ struct OMessage
     typedef std::vector<boost::asio::const_buffer> SendBuffer;
     SendBuffer GetSendBuffer();
 
-    uint8_t* GetHead() { return (uint8_t*)this; }
+    auto GetHead() { return (uint8_t*)this; }
     typedef std::shared_ptr<void> DataT;
-    uint8_t* GetBody() const { return mBody; }
+    auto GetBody() const { return mBody; }
     void SetBody(uint8_t* body) { mBody = body; }
 
     void SetData(DataT pData) { mData = pData; }
