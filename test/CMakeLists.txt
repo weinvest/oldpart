@@ -1,1 +1,2 @@
 add_subdirectory(cryptoTest)
+add_subdirectory(serializeTest)
