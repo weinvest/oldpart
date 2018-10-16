@@ -12,8 +12,7 @@ class OSerializer
 public:
     typedef std::shared_ptr<OMessage> OMessagePtr;
     typedef boost::coroutines2::coroutine<const OMessagePtr> Coro;
-
-    static constexpr int32_t MAX_MESSAGE_BODY_LENGTH = 1<<21;
+    static constexpr int32_t MAX_MESSAGE_BODY_LENGTH = OProtoBase::MAX_MESSAGE_BODY_LENGTH;
 
     Coro::pull_type Serialize(int32_t messageId, const OProtoBase& obj);
     Coro::pull_type Serialize(int32_t messageId, const OProtoBase& obj

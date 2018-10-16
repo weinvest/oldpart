@@ -4,12 +4,7 @@
 #include "crypto/DfcCrypto.h"
 #include "compress/ZLibCompressBuf.h"
 #include "compress/ZLibUnCompressBuf.h"
-template <typename T>
-std::shared_ptr<T> make_shared_array(size_t size)
-{
-    return std::shared_ptr<T>(new T[size], std::default_delete<T[]>());
-}
-
+#include "common/Utils.h"
 OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj)
 {
     return MakeMessageFromBuf(messageId, SerializeMethod::None, 0, [&obj](auto& sink) { obj.Write(sink, nullptr, 0); });

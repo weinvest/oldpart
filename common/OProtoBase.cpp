@@ -1,6 +1,6 @@
 #include "OProtoBase.h"
-
-std::shared_ptr<uint8_t> OProtoBase::EnsureBuffer(Coro::push_type& yield
+#include "common/Utils.h"
+std::shared_ptr<uint8_t> OProtoBase::EnsureBuffer(OProtoBase::Coro::push_type& yield
     , std::shared_ptr<uint8_t>& buf
     , int32_t& offset
     , int32_t eleSize)
@@ -22,13 +22,13 @@ std::shared_ptr<uint8_t> OProtoBase::EnsureBuffer(Coro::push_type& yield
     return buf;
 }
 
-int32_t OProtoBase::WriteFild(Coro::push_type& yield
+int32_t OProtoBase::WriteFild(OProtoBase::Coro::push_type& yield
     , std::shared_ptr<uint8_t>& buf
     , int32_t offset
     , const std::string& v)
 {
-    offset = WriteFild<int32_t>(yield, buf, offset, v.length());
-    auto totalLen = v.length();
+    offset = WriteField<int32_t>(yield, buf, offset, v.length());
+    int32_t totalLen = v.length();
     while(totalLen > 0)
     {
         if(offset == MAX_MESSAGE_BODY_LENGTH)
@@ -37,7 +37,7 @@ int32_t OProtoBase::WriteFild(Coro::push_type& yield
         }
 
         auto writeLen = std::min(totalLen, MAX_MESSAGE_BODY_LENGTH - offset);
-        memcpy(buf.get() + offset, v.data(), writeLen);
+        std::copy_n(v.data(), writeLen, buf.get() + offset);
         offset += writeLen;
         totalLen -= writeLen;
     }
@@ -45,14 +45,14 @@ int32_t OProtoBase::WriteFild(Coro::push_type& yield
     return offset;
 }
 
-int32_t OProtoBase::ReadField(Coro::pull_type& pull
-    , std::shared_ptr<uint8_t>& buf
-    , int32_t offset
-    , std::string& v)
+int32_t OProtoBase::ReadField(OProtoBase::Coro::pull_type& pull
+        , std::shared_ptr<uint8_t>& buf
+        , int32_t offset
+        , std::string& v)
 {
     int32_t len = 0;
     offset = ReadField<int32_t>(pull, buf, offset, len);
-    v.resize(len);
+    v.reserve(len);
     while(len > 0)
     {
         if(MAX_MESSAGE_BODY_LENGTH == offset)
@@ -63,7 +63,7 @@ int32_t OProtoBase::ReadField(Coro::pull_type& pull
         }
 
         auto readable = std::min(len, MAX_MESSAGE_BODY_LENGTH - offset);
-        memcpy(v.data() + v.length() - len, buf.get(), readable);
+        v.append((char*)buf.get(), readable);
         len -= readable;
         offset += readable;
     }
