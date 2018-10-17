@@ -27,7 +27,7 @@ using ubint64_t = boost::endian::big_uint64_buf_at;
 
 struct OMessage
 {
-    bint32_t length;
+    bint32_t bodyLength;
 
     bint16_t major; // major version
     bint16_t minor; // minor version
@@ -47,7 +47,7 @@ struct OMessage
     auto GetCompressLevel() const { return compressLevel.value(); }
 
     auto GetHeadLength() const { return (int32_t)offsetof(OMessage, mBody); }
-    auto GetBodyLength() const { return length.value() - GetHeadLength(); }
+    auto GetBodyLength() const { return bodyLength.value(); }
 
     bool IsCompressed() const { return 0 != (bodySerializeMethod.value() & SerializeMethod::Compress); }
     bool IsEncrypted() const { return 0 != (bodySerializeMethod.value() & SerializeMethod::Encrypt); }

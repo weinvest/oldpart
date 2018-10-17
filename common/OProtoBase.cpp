@@ -63,7 +63,7 @@ int32_t OProtoSerializeHelper<std::string>::Read(OProtoSerializeHelperBase::Coro
         }
 
         auto readable = std::min(len, MAX_MESSAGE_BODY_LENGTH - offset);
-        v.append((char*)buf.get(), readable);
+        v.append((char*)buf.get()+offset, readable);
         len -= readable;
         offset += readable;
     }

@@ -13,6 +13,8 @@ public:
     typedef std::shared_ptr<OMessage> OMessagePtr;
     typedef boost::coroutines2::coroutine<const OMessagePtr> Coro;
     static constexpr int32_t MAX_MESSAGE_BODY_LENGTH = OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH;
+    static constexpr const char* NONE_KEY = "";
+    static std::function<OProtoBase*()> DUMP_CREATOR;
 
     Coro::pull_type Serialize(int32_t messageId, const OProtoBase& obj);
     Coro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
@@ -22,13 +24,19 @@ public:
     Coro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
         , int8_t compressLevel, const std::string& key);
 
-    bool Deserialize(OProtoBase*& pProto, Coro::pull_type& pull, const std::string& key);
+    bool Deserialize(OProtoBase& pProto, Coro::pull_type& pull, const std::string& key);
 
     bool RegisteProtoCreator(int32_t messageId
         , std::function<OProtoBase*()> requestCreator
         , std::function<OProtoBase*()> responseCreator);
 
-    OProtoBase* CreateProto(int32_t messageId);
+    template<typename T>
+    T* CreateProto(int32_t messageId)
+    {
+        return static_cast<T*>(DoCreateProto(messageId));
+    }
+
+    OProtoBase* DoCreateProto(int32_t messageId);
 private:
     Coro::pull_type MakeMessageFromBuf(int32_t messageId
         , int32_t serializeMethod

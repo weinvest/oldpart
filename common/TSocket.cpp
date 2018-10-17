@@ -57,7 +57,7 @@ void TSocket::DoRead()
                     assert(-1 == messageSeqId); //single message
                     if(!mMessageHandler->OnMessage(pMessage))
                     {
-                        mMessageHandler->OnMessage(mSerializer->CreateProto(pMessage->GetMessageId()));
+                        mMessageHandler->OnMessage(mSerializer->DoCreateProto(pMessage->GetMessageId()));
                     }
                 }
                 else
@@ -74,11 +74,11 @@ void TSocket::DoRead()
                                     auto messageSeqId =  pMessage->GetMessageSequenceId();
                                     if(1 == messageSeqId)
                                     {
-                                        pMessageBody = mSerializer->CreateProto(pMessage->GetMessageId());
+                                        pMessageBody = mSerializer->DoCreateProto(pMessage->GetMessageId());
                                         pMessageSink = std::make_shared<OSerializer::Coro::push_type>(
                                             [&, this, self](auto& pull)
                                             {
-                                                mSerializer->Deserialize(pMessageBody, pull, mEncryptKey);
+                                                mSerializer->Deserialize(*pMessageBody, pull, mEncryptKey);
                                             });
                                     }
 

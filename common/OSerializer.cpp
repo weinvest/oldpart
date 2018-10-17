@@ -5,6 +5,8 @@
 #include "compress/ZLibCompressBuf.h"
 #include "compress/ZLibUnCompressBuf.h"
 #include "common/Utils.h"
+
+std::function<OProtoBase*()> OSerializer::DUMP_CREATOR([]() { return (OProtoBase*)nullptr; });
 OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj)
 {
     return MakeMessageFromBuf(messageId, SerializeMethod::None, 0, [&obj](auto& sink) { obj.Write(sink, nullptr, 0); });
@@ -106,7 +108,7 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
         {
             auto pMessage = std::make_shared<OMessage>();
 
-            pMessage->length = std::get<1>(body);
+            pMessage->bodyLength = std::get<1>(body);
             pMessage->major = MESSAGE_MAJOR_VERSION;
             pMessage->minor = MESSAGE_MINOR_VERSION;
             pMessage->sequenceId = mMessageSequenceId.fetch_add(1);
@@ -133,7 +135,7 @@ bool OSerializer::RegisteProtoCreator(int32_t messageId
     return insertResult.second;
 }
 
-OProtoBase* OSerializer::CreateProto(int32_t messageId)
+OProtoBase* OSerializer::DoCreateProto(int32_t messageId)
 {
     auto itCreator = mProtoCreators.find(messageId);
     if(itCreator == mProtoCreators.end())
@@ -161,18 +163,12 @@ OProtoBase* OSerializer::CreateProto(int32_t messageId)
     }
 }
 
-bool OSerializer::Deserialize(OProtoBase*& pProto, Coro::pull_type& pull, const std::string& key)
+bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const std::string& key)
 {
     auto pMessage = pull.get();
-    pProto = CreateProto(pMessage->GetMessageId());
-    if(nullptr == pProto)
+    OProtoBase::Coro::push_type sink([&proto](auto& pull)
     {
-        return false;
-    }
-
-    OProtoBase::Coro::push_type sink([pProto](auto& pull)
-    {
-        pProto->Read(pull, nullptr, 0);
+        proto.Read(pull, nullptr, 0);
     });
 
     do

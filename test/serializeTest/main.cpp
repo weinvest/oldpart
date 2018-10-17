@@ -19,9 +19,19 @@ BOOST_AUTO_TEST_CASE(LessThan1Buf_None)
     obj.v1 = 3.2;
     obj.s1 = "ok, i'm shgli";
     OSerializer serializer;
+    serializer.RegisteProtoCreator(1
+        , [](){ return new LessThan1Buf(); }
+        , OSerializer::DUMP_CREATOR);
+
     auto messages = std::move(serializer.Serialize(1, obj));
     auto pMessage = messages.get();
     BOOST_TEST(1 ==  pMessage->GetMessageId());
     BOOST_TEST(false == pMessage->IsCompressed());
     BOOST_TEST(false == pMessage->IsEncrypted());
+
+    LessThan1Buf* deObj = serializer.CreateProto<LessThan1Buf>(pMessage->GetMessageId());
+    serializer.Deserialize(*deObj, messages, OSerializer::NONE_KEY);
+    BOOST_TEST(deObj->a1 == obj.a1);
+    BOOST_TEST(deObj->v1 == obj.v1);
+    BOOST_TEST(deObj->s1 == obj.s1);
 }

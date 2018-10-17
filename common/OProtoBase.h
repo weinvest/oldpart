@@ -27,7 +27,7 @@ struct OProtoSerializeHelper: public OProtoSerializeHelperBase
         , typename boost::call_traits<T>::param_type v)
     {
         buf = EnsureBuffer(yield, buf, offset, sizeof(T));
-	    std::copy_n(&v, sizeof(v), buf.get()+offset);
+	    std::copy_n((uint8_t*)&v, sizeof(v), buf.get()+offset);
         return offset+sizeof(v);
     }
 
@@ -40,12 +40,12 @@ struct OProtoSerializeHelper: public OProtoSerializeHelperBase
         int32_t readableLen = MAX_MESSAGE_BODY_LENGTH - offset;
         if(FIELD_SIZE <= readableLen)
         {
-	    std::copy_n(buf.get() + offset, FIELD_SIZE, &v);
+	        std::copy_n(buf.get() + offset, FIELD_SIZE, (uint8_t*)&v);
             return offset + FIELD_SIZE;
         }
         else
         {
-            std::copy_n(buf.get() + offset, readableLen, &v);
+            std::copy_n(buf.get() + offset, readableLen, (uint8_t*)&v);
             auto x = pull.get();
             buf = std::get<0>(x);
             int8_t* pV = reinterpret_cast<int8_t*>(&v)+readableLen;
