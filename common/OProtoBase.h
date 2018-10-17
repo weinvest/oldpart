@@ -7,35 +7,31 @@
 #include <boost/coroutine2/all.hpp>
 #include <boost/preprocessor/seq/for_each_i.hpp>
 
-class OProtoBase
+struct OProtoSerializeHelperBase
 {
-public:
     static constexpr int32_t MAX_MESSAGE_BODY_LENGTH = 1<<21;
-
     using BufT = std::tuple<std::shared_ptr<uint8_t>, int32_t, int32_t>;
     using Coro = boost::coroutines2::coroutine<BufT>;
-    virtual void Write(Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t offset) const = 0;
-    virtual void Read(Coro::pull_type& source, std::shared_ptr<uint8_t> buf, int32_t offset) = 0;
+    static std::shared_ptr<uint8_t> EnsureBuffer(Coro::push_type& yield
+        , std::shared_ptr<uint8_t>& buf
+        , int32_t& offset
+        , int32_t eleSize);
+};
 
-    template<typename T>
-    static int32_t WriteField(Coro::push_type& yield
+template<typename T>
+struct OProtoSerializeHelper: public OProtoSerializeHelperBase
+{
+    static int32_t Write(Coro::push_type& yield
         , std::shared_ptr<uint8_t>& buf
         , int32_t offset
         , typename boost::call_traits<T>::param_type v)
     {
         buf = EnsureBuffer(yield, buf, offset, sizeof(T));
-	std::copy_n(&v, sizeof(v), buf.get()+offset);
+	    std::copy_n(&v, sizeof(v), buf.get()+offset);
         return offset+sizeof(v);
     }
 
-    static int32_t WriteFild(Coro::push_type& yield
-        , std::shared_ptr<uint8_t>& buf
-        , int32_t offset
-        , const std::string& v);
-
-
-    template<typename T>
-    static int32_t ReadField(Coro::pull_type& pull
+    static int32_t Read(Coro::pull_type& pull
         , std::shared_ptr<uint8_t>& buf
         , int32_t offset
         , T& v)
@@ -60,41 +56,75 @@ public:
         }
     }
 
-    static int32_t ReadField(Coro::pull_type& yield
+};
+
+template<>
+struct OProtoSerializeHelper<std::string>: public OProtoSerializeHelperBase
+
+{
+    static int32_t Write(Coro::push_type& yield
+        , std::shared_ptr<uint8_t>& buf
+        , int32_t offset
+        , const std::string& v);
+
+    static int32_t Read(Coro::pull_type& yield
         , std::shared_ptr<uint8_t>& buf
         , int32_t offset
         , std::string& v);
-private:
-    static std::shared_ptr<uint8_t> EnsureBuffer(Coro::push_type& yield
+};
+
+class OProtoBase
+{
+public:
+
+    using BufT = std::tuple<std::shared_ptr<uint8_t>, int32_t, int32_t>;
+    using Coro = boost::coroutines2::coroutine<BufT>;
+    virtual void Write(Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t offset) const = 0;
+    virtual void Read(Coro::pull_type& source, std::shared_ptr<uint8_t> buf, int32_t offset) = 0;
+
+    template<typename T>
+    static int32_t WriteField(Coro::push_type& yield
         , std::shared_ptr<uint8_t>& buf
-        , int32_t& offset
-        , int32_t eleSize);
+        , int32_t offset
+        , typename boost::call_traits<T>::param_type v)
+    {
+	return OProtoSerializeHelper<T>::Write(yield, buf, offset, v);
+    }
+
+    template<typename T>
+    static int32_t ReadField(Coro::pull_type& pull
+        , std::shared_ptr<uint8_t>& buf
+        , int32_t offset
+        , T& v)
+    {
+	return OProtoSerializeHelper<T>::Read(pull, buf, offset, v);
+    }
 };
 
 #define DECLARE_PROTO(pname) struct pname: public QProtoBase
 #define PROTO_EXPAND_FIELD(z,d,i,e) BOOST_PP_TUPLE_ELEM(2,0,e) BOOST_PP_TUPLE_ELEM(2,1,e);
-#define PROTO_WRITE_FIELD(z,d,i,e) offset = WriteField(yield, buf, offset, d);
-#define PROTO_READ_FIELD(z,d,i,e) offset = ReadField(pull, buf, offset, d);
+#define PROTO_WRITE_FIELD(z,d,i,e) offset = WriteField<BOOST_PP_TUPLE_ELEM(2,0,e)>(yield, buf, offset, BOOST_PP_TUPLE_ELEM(2,1,e));
+#define PROTO_READ_FIELD(z,d,i,e) offset = ReadField<BOOST_PP_TUPLE_ELEM(2,0,e)>(pull, buf, offset, BOOST_PP_TUPLE_ELEM(2,1,e));
 
 
 #define PROTO_FIELDS(typeNamePair) BOOST_PP_SEQ_FOR_EACH_I(PROTO_EXPAND_FIELD, ~, typeNamePair)\
-    void Write(Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t offset) override;\
+    void Write(Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t offset) const override;\
     void Read(Coro::pull_type& source, std::shared_ptr<uint8_t> buf, int32_t offset) override;
 
-#define PROTO_IMPLEMENTATION(typeNamePair)\
-    void Write(Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t offset) override\
+#define PROTO_IMPLEMENTATION(cls, typeNamePair)\
+    void cls::Write(Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t offset) const\
     {\
         BOOST_PP_SEQ_FOR_EACH_I(PROTO_WRITE_FIELD, ~, typeNamePair)\
         yield(std::make_tuple(buf, offset, 0));\
     }\
-    void Read(Coro::pull_type& source, std::shared_ptr<uint8_t> buf, int32_t offset) override\
+    void cls::Read(Coro::pull_type& pull, std::shared_ptr<uint8_t> buf, int32_t offset)\
     {\
-        if(nullptr == buf){ buf = source.get(); offset = 0; }\
+        if(nullptr == buf){ buf = std::get<0>(pull.get()); offset = 0; }\
         BOOST_PP_SEQ_FOR_EACH_I(PROTO_READ_FIELD, ~, typeNamePair);\
     }
 
-#undef PROTO_EXPAND_FIELD
-#undef PROTO_WRITE_FIELD
-#undef PROTO_READ_FIELD
+// #undef PROTO_EXPAND_FIELD
+// #undef PROTO_WRITE_FIELD
+// #undef PROTO_READ_FIELD
 
 #endif /* end of include guard: _OLDPART_OPROTO_BASE_H */

@@ -1,6 +1,6 @@
 #include "OProtoBase.h"
 #include "common/Utils.h"
-std::shared_ptr<uint8_t> OProtoBase::EnsureBuffer(OProtoBase::Coro::push_type& yield
+std::shared_ptr<uint8_t> OProtoSerializeHelperBase::EnsureBuffer(OProtoSerializeHelperBase::Coro::push_type& yield
     , std::shared_ptr<uint8_t>& buf
     , int32_t& offset
     , int32_t eleSize)
@@ -22,12 +22,12 @@ std::shared_ptr<uint8_t> OProtoBase::EnsureBuffer(OProtoBase::Coro::push_type& y
     return buf;
 }
 
-int32_t OProtoBase::WriteFild(OProtoBase::Coro::push_type& yield
+int32_t OProtoSerializeHelper<std::string>::Write(OProtoSerializeHelperBase::Coro::push_type& yield
     , std::shared_ptr<uint8_t>& buf
     , int32_t offset
     , const std::string& v)
 {
-    offset = WriteField<int32_t>(yield, buf, offset, v.length());
+    offset = OProtoSerializeHelper<int32_t>::Write(yield, buf, offset, v.length());
     int32_t totalLen = v.length();
     while(totalLen > 0)
     {
@@ -45,13 +45,13 @@ int32_t OProtoBase::WriteFild(OProtoBase::Coro::push_type& yield
     return offset;
 }
 
-int32_t OProtoBase::ReadField(OProtoBase::Coro::pull_type& pull
+int32_t OProtoSerializeHelper<std::string>::Read(OProtoSerializeHelperBase::Coro::pull_type& pull
         , std::shared_ptr<uint8_t>& buf
         , int32_t offset
         , std::string& v)
 {
     int32_t len = 0;
-    offset = ReadField<int32_t>(pull, buf, offset, len);
+    offset = OProtoSerializeHelper<int32_t>::Read(pull, buf, offset, len);
     v.reserve(len);
     while(len > 0)
     {
