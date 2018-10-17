@@ -60,6 +60,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
         while(inLen > 0)
         {
             auto compressedLen = compressedBuf.Compress(inBuf, inLen);
+            assert(compressedLen > 0);
             inBuf += compressedLen;
             inLen -= compressedLen;
 
@@ -72,7 +73,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
         }
     }
 
-    if(compressedBuf.IsEmpty())
+    if(!compressedBuf.IsEmpty())
     {
         compressedBuf.CompressEnd();
         sink(std::make_tuple(compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0));

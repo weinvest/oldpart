@@ -12,7 +12,7 @@ public:
     int32_t Compress(uint8_t* inBuf, int32_t inLen);
     void CompressEnd( void );
 
-    auto GetOutLen( void ) const { return mStrm.avail_out; }
+    auto GetOutLen( void ) const { return mOutBufCapacity - mStrm.avail_out; }
     auto GetOutBuf( void ) { return mOutBuf; }
 
     bool IsFull( void ) { return GetOutLen() == mOutBufCapacity;}

@@ -41,3 +41,33 @@ BOOST_AUTO_TEST_CASE(LessThan1Buf_None)
     BOOST_TEST(deObj->v1 == obj.v1);
     BOOST_TEST(deObj->s1 == obj.s1);
 }
+
+BOOST_AUTO_TEST_CASE(LessThan1Buf_Compress)
+{
+    LessThan1Buf obj;
+    obj.a1 = 2;
+    obj.v1 = 3.2;
+    obj.s1 = "ok, i'm shgli";
+    OSerializer serializer;
+    serializer.RegisteProtoCreator(1
+        , [](){ return new LessThan1Buf(); }
+        , OSerializer::DUMP_CREATOR);
+
+    auto compressLevel = 2;
+    auto messages = std::move(serializer.Serialize(1, obj, compressLevel));
+    auto pMessage = messages.get();
+
+    BOOST_TEST(1 ==  pMessage->GetSequenceId());
+    BOOST_TEST(1 ==  pMessage->GetMessageId());
+    BOOST_TEST(-1 == pMessage->GetMessageSequenceId()); //only one message
+    BOOST_TEST(0 == pMessage->GetPadNum());
+    BOOST_TEST(compressLevel == pMessage->GetCompressLevel());
+    BOOST_TEST(true == pMessage->IsCompressed());
+    BOOST_TEST(false == pMessage->IsEncrypted());
+
+    LessThan1Buf* deObj = serializer.CreateProto<LessThan1Buf>(pMessage->GetMessageId());
+    serializer.Deserialize(*deObj, messages, OSerializer::NONE_KEY);
+    BOOST_TEST(deObj->a1 == obj.a1);
+    BOOST_TEST(deObj->v1 == obj.v1);
+    BOOST_TEST(deObj->s1 == obj.s1);
+}
