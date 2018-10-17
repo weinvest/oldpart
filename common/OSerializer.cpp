@@ -9,7 +9,11 @@
 std::function<OProtoBase*()> OSerializer::DUMP_CREATOR([]() { return (OProtoBase*)nullptr; });
 OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj)
 {
-    return MakeMessageFromBuf(messageId, SerializeMethod::None, 0, [&obj](auto& sink) { obj.Write(sink, nullptr, 0); });
+    return MakeMessageFromBuf(messageId, SerializeMethod::None, 0
+        , [&obj](auto& sink)
+          {
+              obj.Write(sink, nullptr, 0);
+          });
 }
 
 OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int8_t compressLevel)
@@ -19,7 +23,8 @@ OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OPr
         , compressLevel
         , [compressLevel, &obj, this](OProtoBase::Coro::push_type& sink)
         {
-            CompressBuf(sink, compressLevel, [&obj](OProtoBase::Coro::push_type& sink) { obj.Write(sink, nullptr, 0); });
+            auto write2RawBuf = [&obj](auto& sink) { obj.Write(sink, nullptr, 0); };
+            CompressBuf(sink, compressLevel, write2RawBuf);
         });
 }
 
@@ -30,7 +35,8 @@ OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OPr
         , 0
         , [&, this](OProtoBase::Coro::push_type& sink)
         {
-            EncryptBuf(sink, key, [&obj](auto& sink) { obj.Write(sink, nullptr, 0); });
+            auto write2RawBuf = [&obj](auto& sink) { obj.Write(sink, nullptr, 0); };
+            EncryptBuf(sink, key, write2RawBuf);
         });
 }
 
@@ -41,7 +47,9 @@ OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OPr
         , compressLevel
         , [&, this, compressLevel](OProtoBase::Coro::push_type& sink)
         {
-            CompressBuf(sink, compressLevel, [&, this](auto& sink) { EncryptBuf(sink, key, [&obj](auto& sink1) { obj.Write(sink1, nullptr, 0); });});
+            auto write2RawBuf = [&obj](auto& sink1) { obj.Write(sink1, nullptr, 0); };
+            auto compressBuf = [&, this](auto& sink1) { CompressBuf(sink1, compressLevel, write2RawBuf);};
+            EncryptBuf(sink, key, compressBuf);
         });
 }
 
