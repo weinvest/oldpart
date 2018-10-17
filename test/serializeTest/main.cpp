@@ -25,7 +25,13 @@ BOOST_AUTO_TEST_CASE(LessThan1Buf_None)
 
     auto messages = std::move(serializer.Serialize(1, obj));
     auto pMessage = messages.get();
+
+    BOOST_TEST(1 ==  pMessage->GetSequenceId());
     BOOST_TEST(1 ==  pMessage->GetMessageId());
+    BOOST_TEST(-1 == pMessage->GetMessageSequenceId()); //only one message
+    BOOST_TEST(0 == pMessage->GetPadNum());
+    BOOST_TEST(0 == pMessage->GetCompressLevel());
+    BOOST_TEST((sizeof(obj.a1) + sizeof(obj.v1) + sizeof(int32_t) + obj.s1.length()) == pMessage->GetBodyLength());
     BOOST_TEST(false == pMessage->IsCompressed());
     BOOST_TEST(false == pMessage->IsEncrypted());
 

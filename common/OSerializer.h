@@ -48,7 +48,7 @@ private:
 
     static constexpr int16_t MESSAGE_MAJOR_VERSION = 1;
     static constexpr int16_t MESSAGE_MINOR_VERSION = 1;
-    std::atomic_int mMessageSequenceId{0};
+    std::atomic_int mMessageSequenceId{1};
 
     struct ProtoCreator
     {

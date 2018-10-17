@@ -104,10 +104,15 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
     {
         int32_t messageSequenceId = 1;
         auto bufPull = OProtoBase::Coro::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
+        std::shared_ptr<OMessage> pMessage;
         for(auto body : bufPull)
         {
-            auto pMessage = std::make_shared<OMessage>();
+            if(nullptr != pMessage)
+            {
+                mesgSink(pMessage);
+            }
 
+            pMessage = std::make_shared<OMessage>();
             pMessage->bodyLength = std::get<1>(body);
             pMessage->major = MESSAGE_MAJOR_VERSION;
             pMessage->minor = MESSAGE_MINOR_VERSION;
@@ -120,9 +125,11 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
 
             pMessage->SetBody(std::get<0>(body).get());
             pMessage->SetData(std::get<0>(body));
-
-            mesgSink(pMessage);
         }
+
+        assert(nullptr != pMessage);
+        pMessage->messageSequenceId = -(messageSequenceId-1);
+        mesgSink(pMessage);
     });
 }
 
