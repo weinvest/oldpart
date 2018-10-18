@@ -125,18 +125,13 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
         std::shared_ptr<OMessage> pMessage;
         for(auto body : bufPull)
         {
-            if(nullptr != pMessage)
-            {
-                mesgSink(pMessage);
-            }
-
             pMessage = std::make_shared<OMessage>();
             pMessage->bodyLength = body.bufLen;
             pMessage->major = MESSAGE_MAJOR_VERSION;
             pMessage->minor = MESSAGE_MINOR_VERSION;
             pMessage->sequenceId = mMessageSequenceId.fetch_add(1);
             pMessage->messageId = messageId; //meesage type
-            pMessage->messageSequenceId = messageSequenceId++;
+            pMessage->messageSequenceId = body.isLast ? (-messageSequenceId) : messageSequenceId;
             pMessage->bodySerializeMethod = serializeMethod;
             pMessage->encryptPadNum = body.padNum;
             pMessage->compressLevel = compressLevel;
@@ -144,11 +139,10 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
 
             pMessage->SetBody(body.buf.get());
             pMessage->SetData(body.buf);
-        }
+            mesgSink(pMessage);
 
-        assert(nullptr != pMessage);
-        pMessage->messageSequenceId = -(messageSequenceId-1);
-        mesgSink(pMessage);
+            ++messageSequenceId;
+        }
     });
 }
 
