@@ -1,5 +1,7 @@
 #include "OProtoBase.h"
 #include "common/Utils.h"
+
+int32_t OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH = 1<<21;
 std::shared_ptr<uint8_t> OProtoSerializeHelperBase::EnsureBuffer(OProtoSerializeHelperBase::Coro::push_type& yield
     , std::shared_ptr<uint8_t>& buf
     , int32_t& offset

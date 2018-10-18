@@ -9,7 +9,7 @@
 
 struct OProtoSerializeHelperBase
 {
-    static constexpr int32_t MAX_MESSAGE_BODY_LENGTH = 1<<21;
+    static int32_t MAX_MESSAGE_BODY_LENGTH;
     struct BufT
     {
         std::shared_ptr<uint8_t> buf;
