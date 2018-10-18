@@ -3,19 +3,24 @@
 #include <cassert>
 #include "ZLibUnCompressBuf.h"
 
-ZLibUnCompressBuf::ZLibUnCompressBuf(std::shared_ptr<uint8_t> pInBuf, int32_t bufLen)
-    :mInBuf(pInBuf)
-    ,mInBufLen(bufLen)
+ZLibUnCompressBuf::ZLibUnCompressBuf( void )
 {
     mStrm.zalloc = Z_NULL;
     mStrm.zfree = Z_NULL;
     mStrm.opaque = Z_NULL;
     mStrm.avail_in = 0;
     mStrm.next_in = Z_NULL;
-    auto ret = inflateInit(&mStrm);
-    if (ret != Z_OK)
+}
+
+void ZLibUnCompressBuf::Reset(std::shared_ptr<uint8_t> pInBuf, int32_t bufLen)
+{
+    if(Z_NULL == mStrm.next_in)
     {
-        throw std::runtime_error("ZLibUnCompressBuf deflateInit failed," + ZLibError(ret));
+        auto ret = inflateInit(&mStrm);
+        if (ret != Z_OK)
+        {
+            throw std::runtime_error("ZLibUnCompressBuf deflateInit failed," + ZLibError(ret));
+        }
     }
 
     mStrm.avail_in = bufLen;

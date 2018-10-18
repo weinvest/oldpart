@@ -4,15 +4,9 @@
 #include "ZLibCompressBuf.h"
 
 ZLibCompressBuf::ZLibCompressBuf(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level)
+:mOutBuf(pOutBuf)
+,mOutBufCapacity(bufLen)
 {
-    Reset(pOutBuf, bufLen, level);
-}
-
-void ZLibCompressBuf::Reset(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level)
-{
-    mOutBuf = pOutBuf;
-    mOutBufCapacity = bufLen;
-
     mStrm.zalloc = Z_NULL;
     mStrm.zfree = Z_NULL;
     mStrm.opaque = Z_NULL;
@@ -25,7 +19,13 @@ void ZLibCompressBuf::Reset(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, in
 
     mStrm.avail_out = bufLen;
     mStrm.next_out =  mOutBuf.get();
-    mIsFull = false;
+    Reset(pOutBuf, bufLen);
+}
+
+void ZLibCompressBuf::Reset(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen)
+{
+    mOutBuf = pOutBuf;
+    mOutBufCapacity = bufLen;
 }
 
 int32_t ZLibCompressBuf::Compress(uint8_t* inBuf, int32_t bufLen, bool isLast)
@@ -33,12 +33,7 @@ int32_t ZLibCompressBuf::Compress(uint8_t* inBuf, int32_t bufLen, bool isLast)
     mStrm.avail_in = bufLen;
     mStrm.next_in = inBuf;
     auto bound = 0;
-    auto flush = Z_NO_FLUSH;
-    if(isLast || ((bound=deflateBound(&mStrm, bufLen)) + mStrm.avail_out) > mOutBufCapacity)
-    {
-        flush = Z_FINISH;
-        mIsFull = true;
-    }
+    auto flush = isLast ? Z_FINISH : Z_NO_FLUSH;
 
     auto ret = deflate(&mStrm, flush);
     assert(ret != Z_STREAM_ERROR);

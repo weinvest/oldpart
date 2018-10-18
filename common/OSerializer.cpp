@@ -78,7 +78,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
             {
                 compressedBuf.CompressEnd();
                 sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, isLast&&(0==inLen)});
-                compressedBuf.Reset(make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH), MAX_MESSAGE_BODY_LENGTH, level);
+                compressedBuf.Reset(make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH), MAX_MESSAGE_BODY_LENGTH);
             }
         }
     }
@@ -191,6 +191,7 @@ bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const st
         proto.Read(pull, nullptr, 0);
     });
 
+    ZLibUnCompressBuf uncompressBuf;
     do
     {
         pMessage = pull.get();
@@ -211,7 +212,7 @@ bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const st
 
         if(pMessage->IsCompressed())
         {
-            ZLibUnCompressBuf uncompressBuf(pBuf, bufLen);
+            uncompressBuf.Reset(pBuf, bufLen);
             while(!uncompressBuf.IsEmpty())
             {
                 auto pUnCompressBuf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
