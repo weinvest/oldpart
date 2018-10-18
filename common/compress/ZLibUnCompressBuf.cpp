@@ -10,14 +10,16 @@ ZLibUnCompressBuf::ZLibUnCompressBuf(std::shared_ptr<uint8_t> pInBuf, int32_t bu
     mStrm.zalloc = Z_NULL;
     mStrm.zfree = Z_NULL;
     mStrm.opaque = Z_NULL;
-    mStrm.avail_in = bufLen;
-    mStrm.next_in = pInBuf.get();
-
+    mStrm.avail_in = 0;
+    mStrm.next_in = Z_NULL;
     auto ret = inflateInit(&mStrm);
     if (ret != Z_OK)
     {
         throw std::runtime_error("ZLibUnCompressBuf deflateInit failed," + ZLibError(ret));
     }
+
+    mStrm.avail_in = bufLen;
+    mStrm.next_in = pInBuf.get();
 }
 
 void ZLibUnCompressBuf::UnCompressEnd()

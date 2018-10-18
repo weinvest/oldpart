@@ -10,7 +10,15 @@
 struct OProtoSerializeHelperBase
 {
     static constexpr int32_t MAX_MESSAGE_BODY_LENGTH = 1<<21;
-    using BufT = std::tuple<std::shared_ptr<uint8_t>, int32_t, int32_t, int32_t>;
+    struct BufT
+    {
+        std::shared_ptr<uint8_t> buf;
+        int32_t bufLen;
+        int32_t padNum;
+        int32_t checksum;
+        int32_t isLast;
+    };
+
     using Coro = boost::coroutines2::coroutine<BufT>;
     static std::shared_ptr<uint8_t> EnsureBuffer(Coro::push_type& yield
         , std::shared_ptr<uint8_t>& buf
@@ -47,7 +55,7 @@ struct OProtoSerializeHelper: public OProtoSerializeHelperBase
         {
             std::copy_n(buf.get() + offset, readableLen, (uint8_t*)&v);
             auto x = pull.get();
-            buf = std::get<0>(x);
+            buf = x.buf;
             int8_t* pV = reinterpret_cast<int8_t*>(&v)+readableLen;
             int32_t restLen = FIELD_SIZE-readableLen;
             std::copy_n(buf.get(), restLen, pV);
@@ -88,7 +96,7 @@ public:
         , int32_t offset
         , typename boost::call_traits<T>::param_type v)
     {
-	return OProtoSerializeHelper<T>::Write(yield, buf, offset, v);
+	    return OProtoSerializeHelper<T>::Write(yield, buf, offset, v);
     }
 
     template<typename T>
@@ -97,7 +105,7 @@ public:
         , int32_t offset
         , T& v)
     {
-	return OProtoSerializeHelper<T>::Read(pull, buf, offset, v);
+	    return OProtoSerializeHelper<T>::Read(pull, buf, offset, v);
     }
 };
 
@@ -115,11 +123,11 @@ public:
     void cls::Write(Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t offset) const\
     {\
         BOOST_PP_SEQ_FOR_EACH_I(PROTO_WRITE_FIELD, ~, typeNamePair)\
-        yield(std::make_tuple(buf, offset, 0, 0));\
+        yield({buf, offset, 0, 0, true});\
     }\
     void cls::Read(Coro::pull_type& pull, std::shared_ptr<uint8_t> buf, int32_t offset)\
     {\
-        if(nullptr == buf){ buf = std::get<0>(pull.get()); offset = 0; }\
+        if(nullptr == buf){ buf = pull.get().buf; offset = 0; }\
         BOOST_PP_SEQ_FOR_EACH_I(PROTO_READ_FIELD, ~, typeNamePair);\
     }
 

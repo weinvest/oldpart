@@ -9,18 +9,19 @@ public:
     ZLibCompressBuf(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level);
     void Reset(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level);
 
-    int32_t Compress(uint8_t* inBuf, int32_t inLen);
+    int32_t Compress(uint8_t* inBuf, int32_t inLen, bool isLast);
     void CompressEnd( void );
 
-    auto GetOutLen( void ) const { return mOutBufCapacity - mStrm.avail_out; }
+    int32_t GetOutLen( void ) const { return mOutBufCapacity - mStrm.avail_out; }
     auto GetOutBuf( void ) { return mOutBuf; }
 
-    bool IsFull( void ) { return GetOutLen() == mOutBufCapacity;}
+    bool IsFull( void ) { return mIsFull;}
     bool IsEmpty( void ) const { return 0 == GetOutLen(); }
 
 private:
     std::shared_ptr<uint8_t> mOutBuf{nullptr};
     int32_t mOutBufCapacity{0};
+    bool mIsFull{false};
 
     z_stream mStrm;
 };

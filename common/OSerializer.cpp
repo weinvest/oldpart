@@ -63,12 +63,13 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
 
     for(auto body : bufPull)
     {
-        auto inBuf = std::get<0>(body).get();
-        auto inLen = std::get<1>(body);
+        auto inBuf = body.buf.get();
+        auto inLen = body.bufLen;
+        auto isLast = body.isLast;
         assert(inLen <= MAX_MESSAGE_BODY_LENGTH);
         while(inLen > 0)
         {
-            auto compressedLen = compressedBuf.Compress(inBuf, inLen);
+            auto compressedLen = compressedBuf.Compress(inBuf, inLen, isLast);
             assert(compressedLen > 0);
             inBuf += compressedLen;
             inLen -= compressedLen;
@@ -76,7 +77,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
             if(compressedBuf.IsFull())
             {
                 compressedBuf.CompressEnd();
-                sink(std::make_tuple(compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0));
+                sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, isLast&&0==inLen});
                 compressedBuf.Reset(make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH), MAX_MESSAGE_BODY_LENGTH, level);
             }
         }
@@ -85,7 +86,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
     if(!compressedBuf.IsEmpty())
     {
         compressedBuf.CompressEnd();
-        sink(std::make_tuple(compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0));
+        sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, true});
     }
 }
 
@@ -96,8 +97,8 @@ void OSerializer::EncryptBuf(OProtoBase::Coro::push_type& sink
     auto bufPull = OProtoBase::Coro::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
     for(auto body : bufPull)
     {
-        auto pRawBuf = std::get<0>(body).get();
-        auto rawBufLen = std::get<1>(body);
+        auto pRawBuf = body.buf.get();
+        auto rawBufLen = body.bufLen;
         auto pEncryptBuf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
         int32_t encryptLen = MAX_MESSAGE_BODY_LENGTH;
         int32_t padNum = 0;
@@ -107,7 +108,7 @@ void OSerializer::EncryptBuf(OProtoBase::Coro::push_type& sink
             , (char*)pRawBuf, rawBufLen, padNum);
 
         assert(true == encryptSucc);
-        sink(std::make_tuple(pEncryptBuf, encryptLen, padNum, checksum));
+        sink({pEncryptBuf, encryptLen, padNum, checksum, body.isLast});
     }
 }
 
@@ -130,19 +131,19 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
             }
 
             pMessage = std::make_shared<OMessage>();
-            pMessage->bodyLength = std::get<1>(body);
+            pMessage->bodyLength = body.bufLen;
             pMessage->major = MESSAGE_MAJOR_VERSION;
             pMessage->minor = MESSAGE_MINOR_VERSION;
             pMessage->sequenceId = mMessageSequenceId.fetch_add(1);
             pMessage->messageId = messageId; //meesage type
             pMessage->messageSequenceId = messageSequenceId++;
             pMessage->bodySerializeMethod = serializeMethod;
-            pMessage->encryptPadNum = std::get<2>(body);
+            pMessage->encryptPadNum = body.padNum;
             pMessage->compressLevel = compressLevel;
-            pMessage->checksum = std::get<3>(body);
+            pMessage->checksum = body.checksum;
 
-            pMessage->SetBody(std::get<0>(body).get());
-            pMessage->SetData(std::get<0>(body));
+            pMessage->SetBody(body.buf.get());
+            pMessage->SetData(body.buf);
         }
 
         assert(nullptr != pMessage);
@@ -220,14 +221,14 @@ bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const st
             {
                 auto pUnCompressBuf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
                 auto compressLen = uncompressBuf.UnCompress(pUnCompressBuf.get(), MAX_MESSAGE_BODY_LENGTH);
-                sink(std::make_tuple(pUnCompressBuf, compressLen, 0, 0));
+                sink({pUnCompressBuf, compressLen, 0, 0, false});
             }
 
             uncompressBuf.UnCompressEnd();
         }
         else
         {
-            sink(std::make_tuple(pBuf, bufLen, 0, 0));
+            sink({pBuf, bufLen, 0, 0, pMessage->IsLast()});
         }
 
         pull();

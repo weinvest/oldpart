@@ -8,7 +8,7 @@ std::shared_ptr<uint8_t> OProtoSerializeHelperBase::EnsureBuffer(OProtoSerialize
     auto totalLength = offset + eleSize;
     if(totalLength > MAX_MESSAGE_BODY_LENGTH)
     {
-        yield(std::make_tuple(buf, offset, 0, 0));
+        yield({buf, offset, 0, 0, false});
         buf = nullptr;
         offset = 0;
     }
@@ -58,7 +58,7 @@ int32_t OProtoSerializeHelper<std::string>::Read(OProtoSerializeHelperBase::Coro
         if(MAX_MESSAGE_BODY_LENGTH == offset)
         {
             auto x = pull.get();
-            buf = std::get<0>(x);
+            buf = x.buf;
             offset = 0;
         }
 

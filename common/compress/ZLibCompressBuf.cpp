@@ -25,14 +25,22 @@ void ZLibCompressBuf::Reset(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, in
 
     mStrm.avail_out = bufLen;
     mStrm.next_out =  mOutBuf.get();
+    mIsFull = false;
 }
 
-int32_t ZLibCompressBuf::Compress(uint8_t* inBuf, int32_t bufLen)
+int32_t ZLibCompressBuf::Compress(uint8_t* inBuf, int32_t bufLen, bool isLast)
 {
     mStrm.avail_in = bufLen;
     mStrm.next_in = inBuf;
+    auto bound = 0;
+    auto flush = Z_NO_FLUSH;
+    if(isLast || ((bound=deflateBound(&mStrm, bufLen)) + mStrm.avail_out) > mOutBufCapacity)
+    {
+        flush = Z_FINISH;
+        mIsFull = true;
+    }
 
-    auto ret = deflate(&mStrm, Z_NO_FLUSH);
+    auto ret = deflate(&mStrm, flush);
     assert(ret != Z_STREAM_ERROR);
     return bufLen - mStrm.avail_in;
 }

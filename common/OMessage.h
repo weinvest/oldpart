@@ -45,6 +45,8 @@ struct OMessage
     auto GetSequenceId() const { return sequenceId.value(); }
     auto GetMessageId() const { return messageId.value(); }
     auto GetMessageSequenceId() const { return messageSequenceId.value(); }
+    auto IsLast() const { return GetMessageSequenceId() < 0; }
+
     auto GetPadNum() const { return encryptPadNum.value(); }
     auto GetCompressLevel() const { return compressLevel.value(); }
 
