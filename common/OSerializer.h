@@ -45,6 +45,7 @@ private:
 
     void CompressBuf(OProtoBase::Coro::push_type& sink, int8_t level, std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
     void EncryptBuf(OProtoBase::Coro::push_type& sink, const std::string& key, std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
+    int32_t ComputeChecksum(uint8_t* pBuf, int32_t bufLen);
 
     static constexpr int16_t MESSAGE_MAJOR_VERSION = 1;
     static constexpr int16_t MESSAGE_MINOR_VERSION = 1;

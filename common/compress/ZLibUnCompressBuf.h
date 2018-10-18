@@ -23,4 +23,5 @@ private:
 
     z_stream mStrm;
 };
+extern std::string ZLibError(int32_t ret);
 #endif //_OLDPART_ZLIBUNCOMPRESS_BUF_H

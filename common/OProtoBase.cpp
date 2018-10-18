@@ -8,7 +8,7 @@ std::shared_ptr<uint8_t> OProtoSerializeHelperBase::EnsureBuffer(OProtoSerialize
     auto totalLength = offset + eleSize;
     if(totalLength > MAX_MESSAGE_BODY_LENGTH)
     {
-        yield(std::make_tuple(buf, offset, 0));
+        yield(std::make_tuple(buf, offset, 0, 0));
         buf = nullptr;
         offset = 0;
     }

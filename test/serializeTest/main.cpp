@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(LessThan1Buf_None)
     BOOST_TEST(false == pMessage->IsEncrypted());
 
     LessThan1Buf* deObj = serializer.CreateProto<LessThan1Buf>(pMessage->GetMessageId());
-    serializer.Deserialize(*deObj, messages, OSerializer::NONE_KEY);
+    BOOST_TEST(true == serializer.Deserialize(*deObj, messages, OSerializer::NONE_KEY));
     BOOST_TEST(deObj->a1 == obj.a1);
     BOOST_TEST(deObj->v1 == obj.v1);
     BOOST_TEST(deObj->s1 == obj.s1);
@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(LessThan1Buf_Compress)
     BOOST_TEST(false == pMessage->IsEncrypted());
 
     LessThan1Buf* deObj = serializer.CreateProto<LessThan1Buf>(pMessage->GetMessageId());
-    serializer.Deserialize(*deObj, messages, OSerializer::NONE_KEY);
+    BOOST_TEST(true == serializer.Deserialize(*deObj, messages, OSerializer::NONE_KEY));
     BOOST_TEST(deObj->a1 == obj.a1);
     BOOST_TEST(deObj->v1 == obj.v1);
     BOOST_TEST(deObj->s1 == obj.s1);
@@ -96,14 +96,14 @@ BOOST_AUTO_TEST_CASE(LessThan1Buf_Encrypt)
     BOOST_TEST(true == pMessage->IsEncrypted());
 
     LessThan1Buf* deObj = serializer.CreateProto<LessThan1Buf>(pMessage->GetMessageId());
-    serializer.Deserialize(*deObj, messages, key);
+    BOOST_TEST(true == serializer.Deserialize(*deObj, messages, key));
     BOOST_TEST(deObj->a1 == obj.a1);
     BOOST_TEST(deObj->v1 == obj.v1);
     BOOST_TEST(deObj->s1 == obj.s1);
 
     auto errKey("errKey");
     LessThan1Buf* deObjErr = serializer.CreateProto<LessThan1Buf>(pMessage->GetMessageId());
-    serializer.Deserialize(*deObj, messages, errKey);
+    BOOST_TEST(false == serializer.Deserialize(*deObj, messages, errKey));
     BOOST_TEST(deObjErr->a1 != obj.a1);
     BOOST_TEST(deObjErr->v1 != obj.v1);
     BOOST_TEST(deObjErr->s1 != obj.s1);
@@ -129,20 +129,17 @@ BOOST_AUTO_TEST_CASE(LessThan1Buf_Compress_And_Encrypt)
     BOOST_TEST(1 ==  pMessage->GetMessageId());
     BOOST_TEST(-1 == pMessage->GetMessageSequenceId()); //only one message
     // BOOST_TEST(0 == pMessage->GetPadNum());
-    BOOST_TEST(0 == pMessage->GetCompressLevel());
+    BOOST_TEST(compressLevel == pMessage->GetCompressLevel());
     BOOST_TEST(true == pMessage->IsCompressed());
     BOOST_TEST(true == pMessage->IsEncrypted());
 
     LessThan1Buf* deObj = serializer.CreateProto<LessThan1Buf>(pMessage->GetMessageId());
-    serializer.Deserialize(*deObj, messages, key);
+    BOOST_TEST(true == serializer.Deserialize(*deObj, messages, key));
     BOOST_TEST(deObj->a1 == obj.a1);
     BOOST_TEST(deObj->v1 == obj.v1);
     BOOST_TEST(deObj->s1 == obj.s1);
 
     auto errKey("errKey");
     LessThan1Buf* deObjErr = serializer.CreateProto<LessThan1Buf>(pMessage->GetMessageId());
-    serializer.Deserialize(*deObj, messages, errKey);
-    BOOST_TEST(deObjErr->a1 != obj.a1);
-    BOOST_TEST(deObjErr->v1 != obj.v1);
-    BOOST_TEST(deObjErr->s1 != obj.s1);
+    BOOST_TEST(false == serializer.Deserialize(*deObj, messages, errKey));
 }

@@ -10,7 +10,7 @@
 struct OProtoSerializeHelperBase
 {
     static constexpr int32_t MAX_MESSAGE_BODY_LENGTH = 1<<21;
-    using BufT = std::tuple<std::shared_ptr<uint8_t>, int32_t, int32_t>;
+    using BufT = std::tuple<std::shared_ptr<uint8_t>, int32_t, int32_t, int32_t>;
     using Coro = boost::coroutines2::coroutine<BufT>;
     static std::shared_ptr<uint8_t> EnsureBuffer(Coro::push_type& yield
         , std::shared_ptr<uint8_t>& buf
@@ -77,8 +77,8 @@ class OProtoBase
 {
 public:
 
-    using BufT = std::tuple<std::shared_ptr<uint8_t>, int32_t, int32_t>;
-    using Coro = boost::coroutines2::coroutine<BufT>;
+    using BufT = OProtoSerializeHelperBase::BufT;
+    using Coro = OProtoSerializeHelperBase::Coro;
     virtual void Write(Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t offset) const = 0;
     virtual void Read(Coro::pull_type& source, std::shared_ptr<uint8_t> buf, int32_t offset) = 0;
 
@@ -115,7 +115,7 @@ public:
     void cls::Write(Coro::push_type& yield, std::shared_ptr<uint8_t> buf, int32_t offset) const\
     {\
         BOOST_PP_SEQ_FOR_EACH_I(PROTO_WRITE_FIELD, ~, typeNamePair)\
-        yield(std::make_tuple(buf, offset, 0));\
+        yield(std::make_tuple(buf, offset, 0, 0));\
     }\
     void cls::Read(Coro::pull_type& pull, std::shared_ptr<uint8_t> buf, int32_t offset)\
     {\

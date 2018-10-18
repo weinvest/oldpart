@@ -1,4 +1,5 @@
 #include <zlib.h>
+#include <boost/crc.hpp>
 #include "OSerializer.h"
 #include "OMessage.h"
 #include "crypto/DfcCrypto.h"
@@ -75,7 +76,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
             if(compressedBuf.IsFull())
             {
                 compressedBuf.CompressEnd();
-                sink(std::make_tuple(compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0));
+                sink(std::make_tuple(compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0));
                 compressedBuf.Reset(make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH), MAX_MESSAGE_BODY_LENGTH, level);
             }
         }
@@ -84,7 +85,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
     if(!compressedBuf.IsEmpty())
     {
         compressedBuf.CompressEnd();
-        sink(std::make_tuple(compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0));
+        sink(std::make_tuple(compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0));
     }
 }
 
@@ -95,11 +96,18 @@ void OSerializer::EncryptBuf(OProtoBase::Coro::push_type& sink
     auto bufPull = OProtoBase::Coro::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
     for(auto body : bufPull)
     {
+        auto pRawBuf = std::get<0>(body).get();
+        auto rawBufLen = std::get<1>(body);
         auto pEncryptBuf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
-        int32_t encryptLen = 0;
+        int32_t encryptLen = MAX_MESSAGE_BODY_LENGTH;
         int32_t padNum = 0;
-        AESEncrypt((char*)pEncryptBuf.get(), encryptLen, key, (char*)std::get<0>(body).get(), std::get<1>(body), padNum);
-        sink(std::make_tuple(pEncryptBuf, encryptLen, padNum));
+
+        int32_t checksum = ComputeChecksum(pRawBuf, rawBufLen);
+        auto encryptSucc = AESEncrypt((char*)pEncryptBuf.get(), encryptLen, key
+            , (char*)pRawBuf, rawBufLen, padNum);
+
+        assert(true == encryptSucc);
+        sink(std::make_tuple(pEncryptBuf, encryptLen, padNum, checksum));
     }
 }
 
@@ -131,6 +139,7 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
             pMessage->bodySerializeMethod = serializeMethod;
             pMessage->encryptPadNum = std::get<2>(body);
             pMessage->compressLevel = compressLevel;
+            pMessage->checksum = std::get<3>(body);
 
             pMessage->SetBody(std::get<0>(body).get());
             pMessage->SetData(std::get<0>(body));
@@ -197,6 +206,11 @@ bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const st
             auto pDecryptedBuf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
             AESDecrypt((char*)pDecryptedBuf.get(), bufLen, key, (char*)pBuf.get(), bufLen, pMessage->GetPadNum());
             pBuf = pDecryptedBuf;
+            auto checksum = ComputeChecksum(pBuf.get(), bufLen);
+            if(checksum != pMessage->GetChecksum())
+            {
+                return false;
+            }
         }
 
         if(pMessage->IsCompressed())
@@ -206,18 +220,25 @@ bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const st
             {
                 auto pUnCompressBuf = make_shared_array<uint8_t>(MAX_MESSAGE_BODY_LENGTH);
                 auto compressLen = uncompressBuf.UnCompress(pUnCompressBuf.get(), MAX_MESSAGE_BODY_LENGTH);
-                sink(std::make_tuple(pUnCompressBuf, compressLen, 0));
+                sink(std::make_tuple(pUnCompressBuf, compressLen, 0, 0));
             }
 
             uncompressBuf.UnCompressEnd();
         }
         else
         {
-            sink(std::make_tuple(pBuf, bufLen, 0));
+            sink(std::make_tuple(pBuf, bufLen, 0, 0));
         }
 
         pull();
     }while(pull);
 
     return true;
+}
+
+int32_t OSerializer::ComputeChecksum(uint8_t* pBuf, int32_t bufLen)
+{
+    boost::crc_32_type crcComputer;
+    crcComputer.process_bytes(pBuf, bufLen);
+    return crcComputer.checksum();
 }

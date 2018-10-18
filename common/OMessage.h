@@ -40,6 +40,8 @@ struct OMessage
     bint8_t compressLevel{0};
     bint8_t encryptPadNum{0};
 
+    bint32_t checksum{0}; //only for encrypt
+
     auto GetSequenceId() const { return sequenceId.value(); }
     auto GetMessageId() const { return messageId.value(); }
     auto GetMessageSequenceId() const { return messageSequenceId.value(); }
@@ -51,6 +53,8 @@ struct OMessage
 
     bool IsCompressed() const { return 0 != (bodySerializeMethod.value() & SerializeMethod::Compress); }
     bool IsEncrypted() const { return 0 != (bodySerializeMethod.value() & SerializeMethod::Encrypt); }
+
+    auto GetChecksum() const { return checksum.value(); }
 
     typedef boost::asio::mutable_buffers_1 ReceiveBuffer;
     ReceiveBuffer GetReceiveBuffer();

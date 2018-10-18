@@ -25,4 +25,5 @@ private:
     z_stream mStrm;
 };
 
+extern std::string ZLibError(int32_t ret);
 #endif /* end of include guard: _OLDPART_ZLIBCOMPRESS_BUF_H */

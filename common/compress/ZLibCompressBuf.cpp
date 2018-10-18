@@ -41,3 +41,31 @@ void ZLibCompressBuf::CompressEnd( void )
 {
     deflateEnd(&mStrm);
 }
+
+/* report a zlib or i/o error */
+std::string ZLibError(int32_t ret)
+{
+    switch (ret)
+    {
+    case Z_ERRNO:
+        if (ferror(stdin))
+        {
+            return std::string("error reading stdin");
+        }
+        if (ferror(stdout))
+        {
+            return std::string("error writing stdout");
+        }
+        break;
+    case Z_STREAM_ERROR:
+        return std::string("invalid compression level");
+    case Z_DATA_ERROR:
+        return std::string("invalid or incomplete deflate data");
+    case Z_MEM_ERROR:
+        return std::string("out of memory");
+    case Z_VERSION_ERROR:
+        return std::string("zlib version mismatch!");
+    }
+
+    return std::to_string(ret);
+}
