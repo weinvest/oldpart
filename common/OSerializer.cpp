@@ -80,21 +80,28 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
             inBuf += compressedLen;
             inLen -= compressedLen;
 
-            if(compressedBuf.IsFull())
+            if((!isLast || inLen > 0) && compressedBuf.IsFull())
             {
-                compressedBuf.CompressEnd();
-                sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, isLast&&(0==inLen)});
+                sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, false});
                 compressedBuf.Reset(make_shared_array<uint8_t>(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH)
                     , OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
             }
-        }
-    }
+            else if(isLast && (0 == inLen))
+            {
+                if(compressedBuf.NeedMoreMemory4Tail())
+                {
+                    assert(compressedBuf.IsFull());
+                    sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, false});
+                    compressedBuf.Reset(make_shared_array<uint8_t>(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH)
+                        , OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+                    compressedBuf.Compress(nullptr, 0, true);
+                }
 
-    if(!compressedBuf.IsEmpty())
-    {
-        compressedBuf.CompressEnd();
-        sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, true});
-    }
+                compressedBuf.CompressEnd();
+                sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, true});
+            }
+        }//while uncompressedLen>0
+    }//foreach buf
 }
 
 void OSerializer::EncryptBuf(OProtoBase::Coro::push_type& sink
@@ -226,8 +233,6 @@ bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const st
                 auto compressLen = uncompressBuf.UnCompress(pUnCompressBuf.get(), OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
                 sink({pUnCompressBuf, compressLen, 0, 0, isLast && uncompressBuf.IsEmpty()});
             }
-
-            uncompressBuf.UnCompressEnd();
         }
         else
         {
@@ -236,7 +241,8 @@ bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const st
 
         pull();
     }while(pull);
-
+    uncompressBuf.UnCompressEnd();
+    
     return true;
 }
 

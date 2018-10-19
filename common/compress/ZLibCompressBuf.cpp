@@ -17,8 +17,6 @@ ZLibCompressBuf::ZLibCompressBuf(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLe
         throw std::runtime_error("ZLibCompressBuf deflateInit with level " + std::to_string(level) + " failed");
     }
 
-    mStrm.avail_out = bufLen;
-    mStrm.next_out =  mOutBuf.get();
     Reset(pOutBuf, bufLen);
 }
 
@@ -26,6 +24,9 @@ void ZLibCompressBuf::Reset(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen)
 {
     mOutBuf = pOutBuf;
     mOutBufCapacity = bufLen;
+
+    mStrm.avail_out = bufLen;
+    mStrm.next_out =  mOutBuf.get();
 }
 
 int32_t ZLibCompressBuf::Compress(uint8_t* inBuf, int32_t bufLen, bool isLast)
@@ -37,6 +38,7 @@ int32_t ZLibCompressBuf::Compress(uint8_t* inBuf, int32_t bufLen, bool isLast)
 
     auto ret = deflate(&mStrm, flush);
     assert(ret != Z_STREAM_ERROR);
+    mNeedMoreMemory4Tail = isLast && ret == Z_OK;
     return bufLen - mStrm.avail_in;
 }
 

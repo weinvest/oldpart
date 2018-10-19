@@ -17,12 +17,13 @@ public:
 
     bool IsFull( void ) { return GetOutLen() == mOutBufCapacity;}
     bool IsEmpty( void ) const { return 0 == GetOutLen(); }
-
+    bool NeedMoreMemory4Tail( void ) const { return mNeedMoreMemory4Tail; }
 private:
     std::shared_ptr<uint8_t> mOutBuf{nullptr};
     int32_t mOutBufCapacity{0};
 
     z_stream mStrm;
+    bool mNeedMoreMemory4Tail{false};
 };
 
 extern std::string ZLibError(int32_t ret);
