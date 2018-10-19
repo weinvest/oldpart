@@ -24,3 +24,6 @@ OMessage::SendBuffer OMessage::GetSendBuffer()
     return bufs;
 }
 
+OMessage::~OMessage()
+{
+}

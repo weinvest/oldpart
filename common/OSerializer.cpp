@@ -41,7 +41,10 @@ OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OPr
         });
 }
 
-OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj, int8_t compressLevel, const std::string& key)
+OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId
+    , const OProtoBase& obj
+    , int8_t compressLevel
+    , const std::string& key)
 {
     return MakeMessageFromBuf(messageId
         , SerializeMethod::Compress|SerializeMethod::Encrypt
@@ -121,8 +124,8 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
     , int8_t compressLevel
     , std::function<void(OProtoBase::Coro::push_type&)> bufFunc)
 {
-    return Coro::pull_type(boost::coroutines2::fixedsize_stack(),
-    [&](Coro::push_type& mesgSink)
+    return Coro::pull_type(boost::coroutines2::protected_fixedsize_stack(),
+    [=](Coro::push_type& mesgSink)
     {
         int32_t messageSequenceId = 1;
         auto bufPull = OProtoBase::Coro::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
@@ -144,7 +147,6 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
             pMessage->SetBody(body.buf.get());
             pMessage->SetData(body.buf);
             mesgSink(pMessage);
-
             ++messageSequenceId;
         }
     });

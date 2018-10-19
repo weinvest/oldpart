@@ -1,0 +1,6 @@
+function(LINK_TCMALLOC TARGET)
+    if (CMAKE_BUILD_TYPE MATCHES "rel[a-zA-Z]+")
+        message(status "wtqioooooooooqqtoiiiii")
+        TARGET_LINK_LIBRARIES(${TARGET} tcmalloc)
+    endif()
+endfunction()

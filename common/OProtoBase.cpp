@@ -31,6 +31,7 @@ int32_t OProtoSerializeHelper<std::string>::Write(OProtoSerializeHelperBase::Cor
 {
     offset = OProtoSerializeHelper<int32_t>::Write(yield, buf, offset, v.length());
     int32_t totalLen = v.length();
+    int32_t copyed = 0;
     while(totalLen > 0)
     {
         if(offset == MAX_MESSAGE_BODY_LENGTH)
@@ -39,9 +40,10 @@ int32_t OProtoSerializeHelper<std::string>::Write(OProtoSerializeHelperBase::Cor
         }
 
         auto writeLen = std::min(totalLen, MAX_MESSAGE_BODY_LENGTH - offset);
-        std::copy_n(v.data(), writeLen, buf.get() + offset);
+        std::copy_n(v.data()+copyed, writeLen, buf.get() + offset);
         offset += writeLen;
         totalLen -= writeLen;
+        copyed += writeLen;
     }
 
     return offset;
@@ -59,6 +61,7 @@ int32_t OProtoSerializeHelper<std::string>::Read(OProtoSerializeHelperBase::Coro
     {
         if(MAX_MESSAGE_BODY_LENGTH == offset)
         {
+            pull();
             auto x = pull.get();
             buf = x.buf;
             offset = 0;

@@ -54,6 +54,7 @@ struct OProtoSerializeHelper: public OProtoSerializeHelperBase
         else
         {
             std::copy_n(buf.get() + offset, readableLen, (uint8_t*)&v);
+            pull();
             auto x = pull.get();
             buf = x.buf;
             int8_t* pV = reinterpret_cast<int8_t*>(&v)+readableLen;

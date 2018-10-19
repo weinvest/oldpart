@@ -1,6 +1,6 @@
 #include <cstdint>
 #define BOOST_TEST_MODULE SERIALIZE_TEST
-#include <boost/test/included/unit_test.hpp>
+#include <boost/test/unit_test.hpp>
 #include "common/OProtoBase.h"
 #include "common/OMessage.h"
 #include "common/OSerializer.h"

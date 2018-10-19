@@ -41,7 +41,7 @@ struct OMessage
     bint8_t encryptPadNum{0};
 
     bint32_t checksum{0}; //only for encrypt
-
+    ~OMessage();
     auto GetSequenceId() const { return sequenceId.value(); }
     auto GetMessageId() const { return messageId.value(); }
     auto GetMessageSequenceId() const { return messageSequenceId.value(); }

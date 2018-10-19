@@ -23,7 +23,9 @@ public:
     Coro::pull_type Serialize(int32_t messageId, const OProtoBase& obj
         , int8_t compressLevel, const std::string& key);
 
-    bool Deserialize(OProtoBase& pProto, Coro::pull_type& pull, const std::string& key);
+    bool Deserialize(OProtoBase& pProto
+        , Coro::pull_type& pull
+        , const std::string& key);
 
     bool RegisteProtoCreator(int32_t messageId
         , std::function<OProtoBase*()> requestCreator
@@ -42,8 +44,12 @@ private:
         , int8_t compressLevel
         , std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
 
-    void CompressBuf(OProtoBase::Coro::push_type& sink, int8_t level, std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
-    void EncryptBuf(OProtoBase::Coro::push_type& sink, const std::string& key, std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
+    void CompressBuf(OProtoBase::Coro::push_type& sink
+        , int8_t level
+        , std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
+    void EncryptBuf(OProtoBase::Coro::push_type& sink
+        , const std::string& key
+        , std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
     int32_t ComputeChecksum(uint8_t* pBuf, int32_t bufLen);
 
     static constexpr int16_t MESSAGE_MAJOR_VERSION = 1;
