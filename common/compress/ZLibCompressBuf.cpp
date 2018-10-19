@@ -3,7 +3,7 @@
 #include <cassert>
 #include "ZLibCompressBuf.h"
 
-ZLibCompressBuf::ZLibCompressBuf(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level)
+ZLibCompressBuf::ZLibCompressBuf(uint8_t* pOutBuf, int32_t bufLen, int32_t level)
 :mOutBuf(pOutBuf)
 ,mOutBufCapacity(bufLen)
 {
@@ -20,13 +20,13 @@ ZLibCompressBuf::ZLibCompressBuf(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLe
     Reset(pOutBuf, bufLen);
 }
 
-void ZLibCompressBuf::Reset(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen)
+void ZLibCompressBuf::Reset(uint8_t* pOutBuf, int32_t bufLen)
 {
     mOutBuf = pOutBuf;
     mOutBufCapacity = bufLen;
 
     mStrm.avail_out = bufLen;
-    mStrm.next_out =  mOutBuf.get();
+    mStrm.next_out =  mOutBuf;
 }
 
 int32_t ZLibCompressBuf::Compress(uint8_t* inBuf, int32_t bufLen, bool isLast)

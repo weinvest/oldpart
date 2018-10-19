@@ -7,7 +7,7 @@ SET(BUILD_SHARED_LIBS ON)
 
 project(oldpart)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y -Werror=uninitialized -Werror=return-type")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Werror=uninitialized -Werror=return-type")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})

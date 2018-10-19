@@ -6,8 +6,8 @@
 class ZLibCompressBuf
 {
 public:
-    ZLibCompressBuf(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen, int32_t level);
-    void Reset(std::shared_ptr<uint8_t> pOutBuf, int32_t bufLen);
+    ZLibCompressBuf(uint8_t* pOutBuf, int32_t bufLen, int32_t level);
+    void Reset(uint8_t* pOutBuf, int32_t bufLen);
 
     int32_t Compress(uint8_t* inBuf, int32_t inLen, bool isLast);
     void CompressEnd( void );
@@ -19,7 +19,7 @@ public:
     bool IsEmpty( void ) const { return 0 == GetOutLen(); }
     bool NeedMoreMemory4Tail( void ) const { return mNeedMoreMemory4Tail; }
 private:
-    std::shared_ptr<uint8_t> mOutBuf{nullptr};
+    uint8_t* mOutBuf{nullptr};
     int32_t mOutBufCapacity{0};
 
     z_stream mStrm;

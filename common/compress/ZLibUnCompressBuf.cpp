@@ -12,7 +12,7 @@ ZLibUnCompressBuf::ZLibUnCompressBuf( void )
     mStrm.next_in = Z_NULL;
 }
 
-void ZLibUnCompressBuf::Reset(std::shared_ptr<uint8_t> pInBuf, int32_t bufLen)
+void ZLibUnCompressBuf::Reset(uint8_t* pInBuf, int32_t bufLen)
 {
     if(Z_NULL == mStrm.next_in)
     {
@@ -24,7 +24,7 @@ void ZLibUnCompressBuf::Reset(std::shared_ptr<uint8_t> pInBuf, int32_t bufLen)
     }
 
     mStrm.avail_in = bufLen;
-    mStrm.next_in = pInBuf.get();
+    mStrm.next_in = pInBuf;
 }
 
 void ZLibUnCompressBuf::UnCompressEnd()

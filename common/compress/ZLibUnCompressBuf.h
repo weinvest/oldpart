@@ -9,7 +9,7 @@ class ZLibUnCompressBuf
 public:
     ZLibUnCompressBuf();
 
-    void Reset(std::shared_ptr<uint8_t> pInBuf, int32_t bufLen);
+    void Reset(uint8_t* pInBuf, int32_t bufLen);
     int32_t UnCompress(uint8_t* outBuf, int32_t outLen);
     void UnCompressEnd();
 

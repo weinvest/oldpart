@@ -62,15 +62,14 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
     , std::function<void(OProtoBase::Coro::push_type&)> bufFunc)
 {
     auto bufPull = OProtoBase::Coro::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
-    ZLibCompressBuf compressedBuf(make_shared_array<uint8_t>(
-          OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH)
-        , OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH
-        , level);
+    auto pBuf = OProtoSerializeHelperBase::MakeBuffer(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+
+    ZLibCompressBuf compressedBuf(pBuf->buf, pBuf->bufLen , level);
 
     for(auto body : bufPull)
     {
-        auto inBuf = body.buf.get();
-        auto inLen = body.bufLen;
+        auto inBuf = body.buf->buf;
+        auto inLen = body.buf->bufLen;
         auto isLast = body.isLast;
         assert(inLen <= OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
         while(inLen > 0)
@@ -82,23 +81,25 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
 
             if((!isLast || inLen > 0) && compressedBuf.IsFull())
             {
-                sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, false});
-                compressedBuf.Reset(make_shared_array<uint8_t>(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH)
-                    , OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+                sink({pBuf, 0, 0, false});
+
+		        pBuf = OProtoSerializeHelperBase::MakeBuffer(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+                compressedBuf.Reset(pBuf->buf, pBuf->bufLen);
             }
             else if(isLast && (0 == inLen))
             {
                 if(compressedBuf.NeedMoreMemory4Tail())
                 {
                     assert(compressedBuf.IsFull());
-                    sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, false});
-                    compressedBuf.Reset(make_shared_array<uint8_t>(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH)
-                        , OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+                    sink({pBuf, 0, 0, false});
+		            pBuf = OProtoSerializeHelperBase::MakeBuffer(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+                    compressedBuf.Reset(pBuf->buf, pBuf->bufLen);
                     compressedBuf.Compress(nullptr, 0, true);
                 }
 
                 compressedBuf.CompressEnd();
-                sink({compressedBuf.GetOutBuf(), compressedBuf.GetOutLen(), 0, 0, true});
+                pBuf->bufLen = compressedBuf.GetOutLen();
+                sink({pBuf, 0, 0, true});
             }
         }//while uncompressedLen>0
     }//foreach buf
@@ -111,18 +112,19 @@ void OSerializer::EncryptBuf(OProtoBase::Coro::push_type& sink
     auto bufPull = OProtoBase::Coro::pull_type(boost::coroutines2::fixedsize_stack(), bufFunc);
     for(auto body : bufPull)
     {
-        auto pRawBuf = body.buf.get();
-        auto rawBufLen = body.bufLen;
-        auto pEncryptBuf = make_shared_array<uint8_t>(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
-        int32_t encryptLen = OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH;
+        auto pRawBuf = body.buf->buf;
+        auto rawBufLen = body.buf->bufLen;
+        auto pEncryptBuf = OProtoSerializeHelperBase::MakeBuffer(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+        int32_t encryptLen = pEncryptBuf->bufLen;
         int32_t padNum = 0;
 
         int32_t checksum = ComputeChecksum(pRawBuf, rawBufLen);
-        auto encryptSucc = AESEncrypt((char*)pEncryptBuf.get(), encryptLen, key
+        auto encryptSucc = AESEncrypt((char*)pEncryptBuf->buf, encryptLen, key
             , (char*)pRawBuf, rawBufLen, padNum);
 
         assert(true == encryptSucc);
-        sink({pEncryptBuf, encryptLen, padNum, checksum, body.isLast});
+        pEncryptBuf->bufLen = encryptLen;
+        sink({pEncryptBuf, padNum, checksum, body.isLast});
     }
 }
 
@@ -140,7 +142,7 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
         for(auto body : bufPull)
         {
             pMessage = std::make_shared<OMessage>();
-            pMessage->bodyLength = body.bufLen;
+            pMessage->bodyLength = body.buf->bufLen;
             pMessage->major = MESSAGE_MAJOR_VERSION;
             pMessage->minor = MESSAGE_MINOR_VERSION;
             pMessage->sequenceId = mMessageSequenceId.fetch_add(1);
@@ -151,7 +153,7 @@ OSerializer::Coro::pull_type OSerializer::MakeMessageFromBuf(int32_t messageId
             pMessage->compressLevel = compressLevel;
             pMessage->checksum = body.checksum;
 
-            pMessage->SetBody(body.buf.get());
+            pMessage->SetBody(body.buf->buf);
             pMessage->SetData(body.buf);
             mesgSink(pMessage);
             ++messageSequenceId;
@@ -210,14 +212,15 @@ bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const st
     {
         pMessage = pull.get();
         auto isLast = pMessage->IsLast();
-        auto pBuf = std::static_pointer_cast<uint8_t>(pMessage->GetData());
-        auto bufLen = pMessage->GetBodyLength();
+
+        using Buf = OProtoSerializeHelperBase::Buf;
+        auto pBuf = std::shared_ptr<Buf>(new Buf{pMessage->GetBody(), pMessage->GetBodyLength()}, [](void*){});
         if(pMessage->IsEncrypted())
         {
-            auto pDecryptedBuf = make_shared_array<uint8_t>(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
-            AESDecrypt((char*)pDecryptedBuf.get(), bufLen, key, (char*)pBuf.get(), bufLen, pMessage->GetPadNum());
+            auto pDecryptedBuf = OProtoSerializeHelperBase::MakeBuffer(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+            AESDecrypt((char*)pDecryptedBuf->buf, pDecryptedBuf->bufLen, key, (char*)pBuf->buf, pBuf->bufLen, pMessage->GetPadNum());
             pBuf = pDecryptedBuf;
-            auto checksum = ComputeChecksum(pBuf.get(), bufLen);
+            auto checksum = ComputeChecksum(pBuf->buf, pBuf->bufLen);
             if(checksum != pMessage->GetChecksum())
             {
                 return false;
@@ -226,23 +229,24 @@ bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const st
 
         if(pMessage->IsCompressed())
         {
-            uncompressBuf.Reset(pBuf, bufLen);
+            uncompressBuf.Reset(pBuf->buf, pBuf->bufLen);
             while(!uncompressBuf.IsEmpty())
             {
-                auto pUnCompressBuf = make_shared_array<uint8_t>(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
-                auto compressLen = uncompressBuf.UnCompress(pUnCompressBuf.get(), OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
-                sink({pUnCompressBuf, compressLen, 0, 0, isLast && uncompressBuf.IsEmpty()});
+                auto pUnCompressBuf = OProtoSerializeHelperBase::MakeBuffer(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+                auto compressLen = uncompressBuf.UnCompress(pUnCompressBuf->buf, pUnCompressBuf->bufLen);
+                pUnCompressBuf->bufLen = compressLen;
+                sink({pUnCompressBuf,0, 0, isLast && uncompressBuf.IsEmpty()});
             }
         }
         else
         {
-            sink({pBuf, bufLen, 0, 0, isLast});
+            sink({pBuf, 0, 0, isLast});
         }
 
         pull();
     }while(pull);
     uncompressBuf.UnCompressEnd();
-    
+
     return true;
 }
 
