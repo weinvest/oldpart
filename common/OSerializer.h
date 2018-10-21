@@ -39,6 +39,8 @@ public:
 
     OProtoBase* DoCreateProto(int32_t messageId);
 private:
+    static void SerializeObject(const OProtoBase& obj, OProtoBase::Coro::push_type& sink);
+
     Coro::pull_type MakeMessageFromBuf(int32_t messageId
         , int32_t serializeMethod
         , int8_t compressLevel
@@ -50,6 +52,7 @@ private:
     void EncryptBuf(OProtoBase::Coro::push_type& sink
         , const std::string& key
         , std::function<void(OProtoBase::Coro::push_type&)> bufFunc);
+
     int32_t ComputeChecksum(uint8_t* pBuf, int32_t bufLen);
 
     static constexpr int16_t MESSAGE_MAJOR_VERSION = 1;

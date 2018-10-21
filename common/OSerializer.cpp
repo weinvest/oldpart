@@ -8,12 +8,21 @@
 #include "common/Utils.h"
 
 std::function<OProtoBase*()> OSerializer::DUMP_CREATOR([]() { return (OProtoBase*)nullptr; });
+
+void OSerializer::SerializeObject(const OProtoBase& obj, OProtoBase::Coro::push_type& sink)
+{
+    std::shared_ptr<OProtoBase::Buf> buf;
+    auto lastBufLen = obj.Write(sink, buf, 0);
+    buf->bufLen = lastBufLen;
+    sink({buf, 0, 0, true});
+}
+
 OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OProtoBase& obj)
 {
     return MakeMessageFromBuf(messageId, SerializeMethod::None, 0
         , [&obj](auto& sink)
           {
-              obj.Write(sink, nullptr, 0);
+              SerializeObject(obj, sink);
           });
 }
 
@@ -24,7 +33,10 @@ OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OPr
         , compressLevel
         , [compressLevel, &obj, this](OProtoBase::Coro::push_type& sink)
         {
-            auto write2RawBuf = [&obj](auto& sink) { obj.Write(sink, nullptr, 0); };
+            auto write2RawBuf = [&obj](auto& sink)
+            {
+                SerializeObject(obj, sink);
+            };
             CompressBuf(sink, compressLevel, write2RawBuf);
         });
 }
@@ -36,7 +48,10 @@ OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId, const OPr
         , 0
         , [&, this](OProtoBase::Coro::push_type& sink)
         {
-            auto write2RawBuf = [&obj](auto& sink) { obj.Write(sink, nullptr, 0); };
+            auto write2RawBuf = [&obj](auto& sink)
+            {
+                SerializeObject(obj, sink);
+            };
             EncryptBuf(sink, key, write2RawBuf);
         });
 }
@@ -51,7 +66,10 @@ OSerializer::Coro::pull_type OSerializer::Serialize(int32_t messageId
         , compressLevel
         , [&, this, compressLevel](OProtoBase::Coro::push_type& sink)
         {
-            auto write2RawBuf = [&obj](auto& sink1) { obj.Write(sink1, nullptr, 0); };
+            auto write2RawBuf = [&obj](auto& sink)
+            {
+                SerializeObject(obj, sink);
+            };
             auto compressBuf = [&, this](auto& sink1) { CompressBuf(sink1, compressLevel, write2RawBuf);};
             EncryptBuf(sink, key, compressBuf);
         });
@@ -83,7 +101,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
             {
                 sink({pBuf, 0, 0, false});
 
-		        pBuf = OProtoSerializeHelperBase::MakeBuffer(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+                pBuf = OProtoSerializeHelperBase::MakeBuffer(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
                 compressedBuf.Reset(pBuf->buf, pBuf->bufLen);
             }
             else if(isLast && (0 == inLen))
@@ -92,7 +110,7 @@ void OSerializer::CompressBuf(OProtoBase::Coro::push_type& sink
                 {
                     assert(compressedBuf.IsFull());
                     sink({pBuf, 0, 0, false});
-		            pBuf = OProtoSerializeHelperBase::MakeBuffer(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
+                    pBuf = OProtoSerializeHelperBase::MakeBuffer(OProtoSerializeHelperBase::MAX_MESSAGE_BODY_LENGTH);
                     compressedBuf.Reset(pBuf->buf, pBuf->bufLen);
                     compressedBuf.Compress(nullptr, 0, true);
                 }
@@ -204,7 +222,8 @@ bool OSerializer::Deserialize(OProtoBase& proto, Coro::pull_type& pull, const st
     auto pMessage = pull.get();
     OProtoBase::Coro::push_type sink([&proto](auto& pull)
     {
-        proto.Read(pull, nullptr, 0);
+        std::shared_ptr<OProtoBase::Buf> buf;
+        proto.Read(pull, buf, 0);
     });
 
     ZLibUnCompressBuf uncompressBuf;

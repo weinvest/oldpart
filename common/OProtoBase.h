@@ -120,8 +120,8 @@ public:
     using Buf = OProtoSerializeHelperBase::Buf;
     using BufT = OProtoSerializeHelperBase::BufT;
     using Coro = OProtoSerializeHelperBase::Coro;
-    virtual void Write(Coro::push_type& yield, std::shared_ptr<Buf> buf, int32_t offset) const = 0;
-    virtual void Read(Coro::pull_type& source, std::shared_ptr<Buf> buf, int32_t offset) = 0;
+    virtual int32_t Write(Coro::push_type& yield, std::shared_ptr<Buf>& buf, int32_t offset) const = 0;
+    virtual int32_t Read(Coro::pull_type& source, std::shared_ptr<Buf>& buf, int32_t offset) = 0;
 
     template<typename T>
     static int32_t WriteField(Coro::push_type& yield
@@ -149,17 +149,16 @@ public:
 
 
 #define PROTO_FIELDS(typeNamePair) BOOST_PP_SEQ_FOR_EACH_I(PROTO_EXPAND_FIELD, ~, typeNamePair)\
-    void Write(Coro::push_type& yield, std::shared_ptr<Buf> buf, int32_t offset) const override;\
-    void Read(Coro::pull_type& source, std::shared_ptr<Buf> buf, int32_t offset) override;
+    int32_t Write(Coro::push_type& yield, std::shared_ptr<Buf>& buf, int32_t offset) const override;\
+    int32_t Read(Coro::pull_type& source, std::shared_ptr<Buf>& buf, int32_t offset) override;
 
 #define PROTO_IMPLEMENTATION(cls, typeNamePair)\
-    void cls::Write(Coro::push_type& yield, std::shared_ptr<Buf> buf, int32_t offset) const\
+    int32_t cls::Write(Coro::push_type& yield, std::shared_ptr<Buf>& buf, int32_t offset) const\
     {\
         BOOST_PP_SEQ_FOR_EACH_I(PROTO_WRITE_FIELD, ~, typeNamePair)\
-        buf->bufLen = offset;\
-        yield({buf, 0, 0, true});\
+        return offset;\
     }\
-    void cls::Read(Coro::pull_type& pull, std::shared_ptr<Buf> buf, int32_t offset)\
+    int32_t cls::Read(Coro::pull_type& pull, std::shared_ptr<Buf>& buf, int32_t offset)\
     {\
         if(nullptr == buf)\
         { \
@@ -168,6 +167,7 @@ public:
             offset = 0; \
         }\
         BOOST_PP_SEQ_FOR_EACH_I(PROTO_READ_FIELD, ~, typeNamePair);\
+        return offset;\
     }
 
 // #undef PROTO_EXPAND_FIELD
