@@ -114,6 +114,41 @@ struct OProtoSerializeHelper<std::string, void>: public OProtoSerializeHelperBas
         , std::string& v);
 };
 
+template<typename T>
+struct OProtoSerializeHelper<std::vector<T>, void> : public OProtoSerializeHelperBase
+{
+    static int32_t Write(Coro::push_type& yield
+        , std::shared_ptr<Buf>& buf
+        , int32_t offset
+        , const std::vector<T>& v)
+    {
+        buf = EnsureBuffer(yield, buf, offset, sizeof(T));
+        offset = OProtoSerializeHelper<int32_t,void>::Write(yield, buf, offset, v.size());
+        for(auto& item : v)
+        {
+            offset = OProtoSerializeHelper<T,void>::Write(yield, buf, offset, item);
+        }
+        return offset;
+    }
+
+    static int32_t Read(Coro::pull_type& pull
+        , std::shared_ptr<Buf>& buf
+        , int32_t offset
+        , std::vector<T>& v)
+    {
+        int32_t size = 0;
+        offset = OProtoSerializeHelper<int32_t,void>::Read(pull, buf, offset, size);
+        assert(size >= 0);
+        v.resize(size);
+        for(int32_t item = 0; item < size; ++item)
+        {
+            offset = OProtoSerializeHelper<T,void>::Read(pull, buf, offset, v[item]);
+        }
+
+        return offset;
+    }
+};
+
 class OProtoBase
 {
 public:
