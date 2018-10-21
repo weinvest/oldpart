@@ -21,4 +21,3 @@ add_subdirectory(test)
 
 FILE(GLOB_RECURSE ${TARGET}_HEADER_LISTS "*.h" "*.hpp")
 INSTALL_FILES(include ${TARGET}_HEADER_LISTS)
-

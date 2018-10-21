@@ -27,18 +27,18 @@ std::shared_ptr<OProtoSerializeHelperBase::Buf> OProtoSerializeHelperBase::Ensur
 
 std::shared_ptr<OProtoSerializeHelperBase::Buf> OProtoSerializeHelperBase::MakeBuffer(int32_t bufLen)
 {
-    auto pData = make_shared_array<uint8_t>(bufLen + sizeof(Buf));
-    new(pData.get())Buf{pData.get()+sizeof(Buf), bufLen};
+    auto pData = new uint8_t[bufLen + sizeof(Buf)];
+    auto pRawBuf = new(pData)Buf{pData+sizeof(Buf), bufLen};
 
-    return std::reinterpret_pointer_cast<OProtoSerializeHelperBase::Buf>(pData);
+    return std::shared_ptr<Buf>(pRawBuf, [](Buf* p) {delete[] (uint8_t*)p;});
 }
 
-int32_t OProtoSerializeHelper<std::string>::Write(OProtoSerializeHelperBase::Coro::push_type& yield
+int32_t OProtoSerializeHelper<std::string,void>::Write(OProtoSerializeHelperBase::Coro::push_type& yield
     , std::shared_ptr<Buf>& buf
     , int32_t offset
     , const std::string& v)
 {
-    offset = OProtoSerializeHelper<int32_t>::Write(yield, buf, offset, v.length());
+    offset = OProtoSerializeHelper<int32_t,void>::Write(yield, buf, offset, v.length());
     int32_t totalLen = v.length();
     int32_t copyed = 0;
     while(totalLen > 0)
@@ -58,13 +58,13 @@ int32_t OProtoSerializeHelper<std::string>::Write(OProtoSerializeHelperBase::Cor
     return offset;
 }
 
-int32_t OProtoSerializeHelper<std::string>::Read(OProtoSerializeHelperBase::Coro::pull_type& pull
+int32_t OProtoSerializeHelper<std::string,void>::Read(OProtoSerializeHelperBase::Coro::pull_type& pull
         , std::shared_ptr<Buf>& buf
         , int32_t offset
         , std::string& v)
 {
     int32_t len = 0;
-    offset = OProtoSerializeHelper<int32_t>::Read(pull, buf, offset, len);
+    offset = OProtoSerializeHelper<int32_t,void>::Read(pull, buf, offset, len);
     v.reserve(len);
     while(len > 0)
     {

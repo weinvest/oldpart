@@ -3,10 +3,12 @@
 #include <tuple>
 #include <stdint.h>
 #include <memory>
+#include <type_traits>
 #include <boost/call_traits.hpp>
 #include <boost/coroutine2/all.hpp>
 #include <boost/preprocessor/seq/for_each_i.hpp>
 
+class OProtoBase;
 struct OProtoSerializeHelperBase
 {
     static int32_t MAX_MESSAGE_BODY_LENGTH;
@@ -33,9 +35,32 @@ struct OProtoSerializeHelperBase
     static std::shared_ptr<Buf> MakeBuffer(int32_t bufLen);
 };
 
+template<typename T, typename E> struct OProtoSerializeHelper;
+
 template<typename T>
-struct OProtoSerializeHelper: public OProtoSerializeHelperBase
+struct OProtoSerializeHelper<T, std::enable_if_t<std::is_base_of<OProtoBase,T>::value>> : public OProtoSerializeHelperBase
 {
+    static int32_t Write(Coro::push_type& yield
+        , std::shared_ptr<Buf>& buf
+        , int32_t offset
+        , typename boost::call_traits<T>::param_type v)
+    {
+        return v.Write(yield, buf, offset);
+    }
+
+    static int32_t Read(Coro::pull_type& pull
+        , std::shared_ptr<Buf>& buf
+        , int32_t offset
+        , T& v)
+    {
+        return v.Read(pull, buf, offset);
+    }
+};
+
+template<typename T>
+struct OProtoSerializeHelper<T, std::enable_if_t<std::is_pod<T>::value>> : public OProtoSerializeHelperBase
+{
+
     static int32_t Write(Coro::push_type& yield
         , std::shared_ptr<Buf>& buf
         , int32_t offset
@@ -75,7 +100,7 @@ struct OProtoSerializeHelper: public OProtoSerializeHelperBase
 };
 
 template<>
-struct OProtoSerializeHelper<std::string>: public OProtoSerializeHelperBase
+struct OProtoSerializeHelper<std::string, void>: public OProtoSerializeHelperBase
 
 {
     static int32_t Write(Coro::push_type& yield
@@ -104,7 +129,7 @@ public:
         , int32_t offset
         , typename boost::call_traits<T>::param_type v)
     {
-	    return OProtoSerializeHelper<T>::Write(yield, buf, offset, v);
+	    return OProtoSerializeHelper<T,void>::Write(yield, buf, offset, v);
     }
 
     template<typename T>
@@ -113,7 +138,7 @@ public:
         , int32_t offset
         , T& v)
     {
-	    return OProtoSerializeHelper<T>::Read(pull, buf, offset, v);
+	    return OProtoSerializeHelper<T,void>::Read(pull, buf, offset, v);
     }
 };
 
