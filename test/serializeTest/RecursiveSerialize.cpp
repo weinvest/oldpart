@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_CASE(RecursiveSerialize_None)
 {
     RecursiveSerialize obj;
     obj.a1 = 2;
-    obj.v1.n2 = 8;
+    obj.v1.n1 = 8;
     obj.v1.n2 = "shgli";
     obj.v1.n3 = 9.2;
     obj.s1 = "ok, i'm shgli";
@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(RecursiveSerialize_Compress)
     RecursiveSerialize obj;
     obj.a1 = 2;
     obj.a1 = 2;
-    obj.v1.n2 = 8;
+    obj.v1.n1 = 8;
     obj.v1.n2 = "shgli";
     obj.v1.n3 = 9.2;
     obj.s1 = "ok, i'm shgli";
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(RecursiveSerialize_Encrypt)
     RecursiveSerialize obj;
     obj.a1 = 2;
     obj.a1 = 2;
-    obj.v1.n2 = 8;
+    obj.v1.n1 = 8;
     obj.v1.n2 = "shgli";
     obj.v1.n3 = 9.2;
     obj.s1 = "ok, i'm shgli";
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE(RecursiveSerialize_Compress_And_Encrypt)
     RecursiveSerialize obj;
     obj.a1 = 2;
     obj.a1 = 2;
-    obj.v1.n2 = 8;
+    obj.v1.n1 = 8;
     obj.v1.n2 = "shgli";
     obj.v1.n3 = 9.2;
     obj.s1 = "ok, i'm shgli";
