@@ -29,9 +29,9 @@ void TSocket::Send(std::shared_ptr<OMessage> pMessage)
     });
 }
 
-void TSocket::Send(int32_t messageId, int32_t requestId, const OProtoBase& pProto)
+void TSocket::Send(int32_t messageId, int32_t requestId, std::shared_ptr<OProtoBase> pProto)
 {
-    for(auto pMessage : mSerializer->Serialize(messageId, pProto, mCompressLevel, mEncryptKey))
+    for(auto pMessage : mSerializer->Serialize(messageId, *pProto, mCompressLevel, mEncryptKey))
     {
         pMessage->requestId = requestId;
         Send(pMessage);
@@ -57,7 +57,9 @@ void TSocket::DoRead()
                     assert(-1 == messageSeqId); //single message
                     if(!mMessageHandler->OnMessage(pMessage))
                     {
-                        mMessageHandler->OnMessage(mSerializer->DoCreateProto(pMessage->GetMessageId()));
+                        auto messageId = pMessage->GetMessageId();
+                        auto pProto = mSerializer->DoCreateProto(messageId);
+                        mMessageHandler->OnMessage(pMessage, pProto);
                     }
                 }
                 else
@@ -72,9 +74,10 @@ void TSocket::DoRead()
                                 if(!mMessageHandler->OnMessage(pMessage))
                                 {
                                     auto messageSeqId =  pMessage->GetMessageSequenceId();
+                                    auto messageId = pMessage->GetMessageId();
                                     if(1 == messageSeqId)
                                     {
-                                        pMessageBody = mSerializer->DoCreateProto(pMessage->GetMessageId());
+                                        pMessageBody = mSerializer->DoCreateProto(messageId);
                                         pMessageSink = std::make_shared<OSerializer::Coro::push_type>(
                                             [&, this, self](auto& pull)
                                             {
@@ -86,7 +89,7 @@ void TSocket::DoRead()
 
                                     if(messageSeqId < 0)
                                     {
-                                        mMessageHandler->OnMessage(pMessageBody);
+                                        mMessageHandler->OnMessage(pMessage, pMessageBody);
                                         pMessageBody = nullptr;
                                         pMessageSink = nullptr;
                                     }

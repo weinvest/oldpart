@@ -17,8 +17,8 @@ public:
     public:
         virtual ~MessageHandler() {}
 
-        virtual bool OnMessage(const std::shared_ptr<OMessage>& discover) { return false; }
-        virtual void OnMessage(OProtoBase* pMessage) = 0;
+        virtual bool OnMessage(const std::shared_ptr<OMessage>& pMessage) { return false; }
+        virtual void OnMessage(const std::shared_ptr<OMessage>& pMessage, OProtoBase* pMessage) = 0;
     };
 
     TSocket(const TSocket&) = delete;
@@ -36,7 +36,7 @@ public:
     void SetCompressLevel(int8_t compressLevel) { mCompressLevel = compressLevel; }
 
     void Send(std::shared_ptr<OMessage> pMessage);
-    void Send(int32_t messageId, int32_t requestId, const OProtoBase& pProto);
+    void Send(int32_t messageId, int32_t requestId, std::shared_ptr<OProtoBase> pProto);
     void Start();
     void Stop();
 private:

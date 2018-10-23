@@ -70,7 +70,7 @@ public:
 
     void WaitOrganizationExit()
     {
-	int32_t status = 0;
+        int32_t status = 0;
         auto pid = waitpid(-1, &status, WNOHANG);
         if(pid > 0)
         {

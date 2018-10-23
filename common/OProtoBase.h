@@ -205,8 +205,4 @@ public:
         return offset;\
     }
 
-// #undef PROTO_EXPAND_FIELD
-// #undef PROTO_WRITE_FIELD
-// #undef PROTO_READ_FIELD
-
 #endif /* end of include guard: _OLDPART_OPROTO_BASE_H */

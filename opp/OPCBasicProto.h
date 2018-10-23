@@ -1,5 +1,5 @@
-#ifndef _OLDPART_OPCBASIC_H
-#define _OLDPART_OPCBASIC_H
+#ifndef _OLDPART_OPCBASIC_PROTO_H
+#define _OLDPART_OPCBASIC_PROTO_H
 #include "common/OEnum.h"
 #include "common/OProtoBase.h"
 
