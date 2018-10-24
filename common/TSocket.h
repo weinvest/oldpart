@@ -18,7 +18,7 @@ public:
         virtual ~MessageHandler() {}
 
         virtual bool OnMessage(const std::shared_ptr<OMessage>& pMessage) { return false; }
-        virtual void OnMessage(const std::shared_ptr<OMessage>& pMessage, OProtoBase* pMessage) = 0;
+        virtual void OnMessage(const std::shared_ptr<OMessage>& pMessage, OProtoBase* pProto) = 0;
     };
 
     TSocket(const TSocket&) = delete;

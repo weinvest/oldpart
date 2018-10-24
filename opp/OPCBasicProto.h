@@ -10,9 +10,16 @@
 struct FileType
 {
     #define FILE_TYPE_VALUES\
+        ((None, 0x0))\
+        ((NotFound,-1))\
         ((File, 0x1))\
         ((Directory, 0x2))\
-        ((SymbolLink, 0x4))
+        ((SymbolLink, 0x3))\
+        ((Block, 0x4))\
+        ((Character, 0x5))\
+        ((Fifo, 0x6))\
+        ((Socket, 0x7))\
+        ((Unknown, 0x8))
 
     enum type
     {
@@ -28,6 +35,7 @@ struct FileInfo: public OProtoBase
 #define FILE_INFO_FIELDS\
     ((FileType,ftype))\
     ((std::string,name))\
+    ((std::string,link2))\
     ((size_t,size))\
     ((int64_t,lastModifyTime))
 

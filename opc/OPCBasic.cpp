@@ -6,9 +6,44 @@ void OPCBasic::OnListFilesRequest(const std::shared_ptr<OMessage>& pMessage, Lis
 {
     OProtoResponseGuard responseGuard(pMessage, mSocket);
     auto pResponse = responseGuard.Create<ListFilesResponse>();
-    if(!fs::exists(pListFilesRequest->path))
+    try
     {
+        fs::path p(pListFilesRequest->path);
+        auto readFileInfo = [this, pResponse](fs::path& p)
+        {
+            pResponse->files.emplace_back();
+            FileInfo& fInfo = pResponse->files.back();
+            auto fStatus = fs::status(p);
+            fInfo.ftype = fStatus.type;
+            fInfo.name = p.name().string();
+            fInfo.size = fs::file_size(p);
+            fInfo.lastModifyTime = fs::last_write_time(p);
 
+            if(fs::is_symlink(p))
+            {
+                fInfo.link2 = fs::read_symlink(p).string();
+            }
+        };
+
+        readFileInfo(p);
+        if(fs::is_directory(p))
+        {
+            fs::directory_iterator end;
+            for(fs::directory_iterator pos(p); pos != end; ++pos)
+            {
+                readFileInfo(*pos);
+            }
+        }
+    }
+    catch(const fs::filesystem_error& ex)
+    {
+        pResponse->errCode = ex.code();
+        pResponse->errMsg = ex.what();
+    }
+    catch(const std::exception& ex)
+    {
+        pResponse->errCode = -1;
+        pResponse->errMsg = ex.what();
     }
 }
 
