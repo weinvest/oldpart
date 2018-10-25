@@ -1,9 +1,14 @@
 #ifndef _OLDPART_OPCBASIC_H
 #define _OLDPART_OPCBASIC_H
 #include <memory>
+#include <boost/filesystem.hpp>
 #include "opp/OPCBasicProto.h"
 
+namespace fs = boost::filesystem;
+
 class OProtoBase;
+class OMessage;
+class TSocket;
 class TClient;
 class MessageDispatcher;
 class OPCBasic
@@ -15,7 +20,9 @@ public:
     void OnGrepFileRequest(const std::shared_ptr<OMessage>& pMessage, CatFileRequest* pGrepFileRequest);
 
 private:
-    std::shared_ptr<TClient> mSocket;
+    FileInfo GetFileInfo(const fs::path& p);
+
+    std::shared_ptr<TSocket> mSocket;
     std::shared_ptr<MessageDispatcher> mMessageDispatcher;
 };
 #endif//_OLDPART_OPCBASIC_H

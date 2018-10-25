@@ -18,6 +18,6 @@ void MessageDispatcher::OnMessage(const std::shared_ptr<OMessage>& pMessage, OPr
     auto itHandler = mHandlers.find(pMessage->GetMessageId());
     if(itHandler != mHandlers.end())
     {
-        itHandler->second(pProto);
+        itHandler->second(pMessage, pProto);
     }
 }

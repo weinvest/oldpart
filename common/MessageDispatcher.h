@@ -10,7 +10,7 @@ public:
     bool RegisteHandler(int32_t msgId, Handler handler);
     bool UnregisteHandler(int32_t msgId);
 
-    void OnMessage(const std::shared_ptr<OMessage>& pMessage, OProtoBase* pMessage) override;
+    void OnMessage(const std::shared_ptr<OMessage>& pMessage, OProtoBase* pProto) override;
 private:
     std::unordered_map<int32_t, Handler> mHandlers;
 };

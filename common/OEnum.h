@@ -9,12 +9,12 @@
 #include <boost/preprocessor/seq/for_each_i.hpp>
 #include <boost/preprocessor/punctuation/comma_if.hpp>
 
-#define OENUM  _EXPAND(z,d,i,e) BOOST_PP_COMMA_IF(i) BOOST_PP_TUPLE_ELEM(2,0,e) = BOOST_PP_TUPLE_ELEM(2,1,e)
-#define OENUM  _VALUE(seq) BOOST_PP_SEQ_FOR_EACH_I(OENUM  _EXPAND,-,seq)
-#define OENUM  _PARSE(z,d,i,e) gString2Enum->insert(std::make_pair(BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2,0,e)),BOOST_PP_TUPLE_ELEM(2,0,e)));
-#define OENUM  _TOSTR(z,d,i,e) gEnum2String->insert(std::make_pair(BOOST_PP_TUPLE_ELEM(2,0,e),BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2,0,e))));
+#define OENUM_EXPAND(z,d,i,e) BOOST_PP_COMMA_IF(i) BOOST_PP_TUPLE_ELEM(2,0,e) = BOOST_PP_TUPLE_ELEM(2,1,e)
+#define OENUM_VALUE(seq) BOOST_PP_SEQ_FOR_EACH_I(OENUM_EXPAND,-,seq)
+#define OENUM_PARSE(z,d,i,e) gString2Enum->insert(std::make_pair(BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2,0,e)),BOOST_PP_TUPLE_ELEM(2,0,e)));
+#define OENUM_TOSTR(z,d,i,e) gEnum2String->insert(std::make_pair(BOOST_PP_TUPLE_ELEM(2,0,e),BOOST_PP_STRINGIZE(BOOST_PP_TUPLE_ELEM(2,0,e))));
 
-#define OENUM  _IMPL_TO_STRING(EnumName,seq) \
+#define OENUM_IMPL_TO_STRING(EnumName,seq) \
     const std::string& EnumName::ToString(EnumName::type v)\
     {\
         static std::unordered_map<EnumName::type,std::string>* gEnum2String = nullptr;\
@@ -24,7 +24,7 @@
         ,[]()\
         {\
             gEnum2String = new std::unordered_map<EnumName::type,std::string>();\
-            BOOST_PP_SEQ_FOR_EACH_I(OENUM  _TOSTR,~,seq)\
+            BOOST_PP_SEQ_FOR_EACH_I(OENUM_TOSTR,~,seq)\
         });\
         auto itResult = gEnum2String->find(v);\
         if(itResult != gEnum2String->end())\
@@ -34,7 +34,7 @@
         return UNKNOWN_VALUE;\
     }
 
-#define OENUM  _IMPL_PARSE(EnumName,seq)\
+#define OENUM_IMPL_PARSE(EnumName,seq)\
     bool EnumName::Parse(const std::string& value,EnumName::type& v)\
     {\
         static std::unordered_map<std::string,EnumName::type>* gString2Enum = nullptr;\
@@ -43,7 +43,7 @@
         ,[]()\
 		{\
             gString2Enum = new std::unordered_map<std::string,EnumName::type>();\
-            BOOST_PP_SEQ_FOR_EACH_I(OENUM  _PARSE,~,seq)\
+            BOOST_PP_SEQ_FOR_EACH_I(OENUM_PARSE,~,seq)\
 		});\
         auto itResult = gString2Enum->find(value);\
         if(gString2Enum->end() != itResult)\
@@ -54,7 +54,7 @@
         return false;\
    }
 
-#define OENUM  _IMPL_PARSE_EX(EnumName, seq)\
+#define OENUM_IMPL_PARSE_EX(EnumName, seq)\
     bool EnumName::ParseEx(const std::string& value,int32_t& v)\
     {\
         std::std::vector<std::string> actions;\
