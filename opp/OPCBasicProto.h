@@ -113,11 +113,41 @@ struct GrepFileRequest: public OProtoBase
    PROTO_FIELDS(GREP_FILE_REQUEST_FIELDS)
 };
 
+
+struct GrepMatchRange: public OProtoBase
+{
+#define GREP_MATCH_RANGE_FIELDS\
+   ((int32_t, from))\
+   ((int32_t, to))\
+
+   PROTO_FIELDS(GREP_MATCH_RANGE_FIELDS)
+};
+
+struct GrepLineResult: public OProtoBase
+{
+#define GREP_LINE_RESULT_FIELDS\
+   ((int32_t, lineNo))\
+   ((std::vector<GrepMatchRange>, subMatches))\
+
+   PROTO_FIELDS(GREP_LINE_RESULT_FIELDS)
+};
+
+struct SelectedGrepLine: public OProtoBase
+{
+#define SELECTTED_GREP_LINE_FIELDS\
+    ((int32_t, lineNo))\
+    ((int32_t, matchIndex))\
+    ((std::string,line))
+
+    PROTO_FIELDS(SELECTTED_GREP_LINE_FIELDS)
+};
+
 struct GrepFileResponse: public OProtoBase
 {
 #define GREP_FILE_RESPONSE_FIELDS\
     OMESSAGE_RESPONSE_FIELDS\
-    ((std::vector<std::string>, matches))
+    ((std::vector<GrepLineResult>, matches))\
+    ((std::vector<SelectedGrepLine>, selectedLines))
 
     PROTO_FIELDS(GREP_FILE_RESPONSE_FIELDS)
 };
@@ -139,7 +169,8 @@ struct GrepFilesResponse: public OProtoBase
 {
 #define GREP_FILES_RESPONSE_FIELDS\
     OMESSAGE_RESPONSE_FIELDS\
-    ((std::vector<std::string>, matches))
+    ((std::vector<GrepLineResult>, matches))\
+    ((std::vector<SelectedGrepLine>, selectedLines))
 
     PROTO_FIELDS(GREP_FILES_RESPONSE_FIELDS)
 };
