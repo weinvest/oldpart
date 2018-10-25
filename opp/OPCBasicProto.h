@@ -1,7 +1,9 @@
 #ifndef _OLDPART_OPCBASIC_PROTO_H
 #define _OLDPART_OPCBASIC_PROTO_H
+#include <string>
 #include "common/OEnum.h"
 #include "common/OProtoBase.h"
+#include "opp/IOStream.h"
 
 #define OMESSAGE_RESPONSE_FIELDS\
     ((int32_t, errCode))\
@@ -26,14 +28,14 @@ struct FileType
         OENUM_VALUE(FILE_TYPE_VALUES)
     };
 
-    const std::string& ToString(type v);
-    bool EnumName::Parse(const std::string& value, type& v);
+    static const std::string& ToString(type v);
+    static bool Parse(const std::string& value, type& v);
 };
 
 struct FileInfo: public OProtoBase
 {
 #define FILE_INFO_FIELDS\
-    ((FileType,ftype))\
+    ((FileType::type,ftype))\
     ((std::string,name))\
     ((std::string,link2))\
     ((size_t,size))\
@@ -55,7 +57,7 @@ struct ListFilesResponse: public OProtoBase
 {
 #define LIST_FILES_RESPONSE_FIELDS\
    OMESSAGE_RESPONSE_FIELDS\
-   ((std::std::vector<FileInfo>, files))
+   ((std::vector<FileInfo>, files))
 
    PROTO_FIELDS(LIST_FILES_RESPONSE_FIELDS)
 };
@@ -74,12 +76,12 @@ struct FindFilesResponse: public OProtoBase
 {
 #define FIND_FILES_RESPONSE_FIELDS\
     OMESSAGE_RESPONSE_FIELDS\
-    ((std::std::vector<FileInfo>, files))
+    ((std::vector<FileInfo>, files))
     PROTO_FIELDS(FIND_FILES_RESPONSE_FIELDS)
 };
 
 static constexpr int32_t OMESSAGE_CAT_FILE = 1027;
-struct CatFileRequest: public QProtoBase
+struct CatFileRequest: public OProtoBase
 {
 #define CAT_FILE_REQUEST_FIELDS\
    ((std::string, path))\
@@ -93,13 +95,14 @@ struct CatFileResponse: public OProtoBase
 {
 #define CAT_FILE_RESPONSE_FIELDS\
    OMESSAGE_RESPONSE_FIELDS\
-   ((OStream, content))
+   ((IOStream, content))
 
    PROTO_FIELDS(CAT_FILE_RESPONSE_FIELDS)
 };
 
 static constexpr int32_t OMESSAGE_GREP_FILE = 1028;
-struct GrepFileRequest: public QProtoBase
+
+struct GrepFileRequest: public OProtoBase
 {
 #define GREP_FILE_REQUEST_FIELDS\
    ((std::string, path))\
@@ -119,4 +122,25 @@ struct GrepFileResponse: public OProtoBase
     PROTO_FIELDS(GREP_FILE_RESPONSE_FIELDS)
 };
 
+static constexpr int32_t OMESSAGE_GREP_FILES = 1029;
+struct GrepFilesRequest: public OProtoBase
+{
+#define GREP_FILES_REQUEST_FIELDS\
+   ((std::string, path))\
+   ((std::string, findPattern))\
+   ((std::string, pattern))\
+   ((int32_t,before))\
+   ((int32_t,after))
+
+   PROTO_FIELDS(GREP_FILES_REQUEST_FIELDS)
+};
+
+struct GrepFilesResponse: public OProtoBase
+{
+#define GREP_FILES_RESPONSE_FIELDS\
+    OMESSAGE_RESPONSE_FIELDS\
+    ((std::vector<std::string>, matches))
+
+    PROTO_FIELDS(GREP_FILES_RESPONSE_FIELDS)
+};
 #endif //_OLDPART_OPCBASIC_H

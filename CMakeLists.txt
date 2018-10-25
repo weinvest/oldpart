@@ -15,6 +15,7 @@ INCLUDE_DIRECTORIES($ENV{BOOST_INCLUDE_PATH})
 LINK_DIRECTORIES($ENV{BOOST_LIB_PATH})
 
 add_subdirectory(common)
+add_subdirectory(opp)
 add_subdirectory(opc)
 add_subdirectory(ops)
 add_subdirectory(test)
