@@ -106,52 +106,53 @@ void OPCBasic::OnGrepFileRequest(const std::shared_ptr<OMessage>& pMessage
            throw  std::invalid_argument("GrepFileRequest::after should greatequal 0");
         }
 
-        std::fstream inFile(pGrepFileRequest->path, std::ios::binary|std::ios::in);
-        auto pattern = re::sregex::compile(pGrepFileRequest->pattern);
-        int32_t lineNo = 1;
-        int32_t matchIndex = -1;
-        int32_t afterCount = pGrepFileRequest->after;
-        boost::circular_buffer<GrepTrace> beforeBuffer(pGrepFileRequest->before+1);
-        beforeBuffer.push_back(GrepTrace());
+        GrepFile(pResponse.get()
+            , pGrepFileRequest->path
+            , pGrepFileRequest->pattern
+            , pGrepFileRequest->before
+            , pGrepFileRequest->after);
 
-        auto* pGrepTrace = &beforeBuffer.back();
-        while(std::getline(inFile, pGrepTrace->line))
+    }
+    CATCH_RESPONSE(pResponse)
+}
+
+void OPCBasic::GrepFile(GrepFileResponse* pResponse
+    , const std::string& p
+    , const std::string& spattern
+    , int32_t before, int32_t after)
+{
+    std::fstream inFile(p, std::ios::binary|std::ios::in);
+    auto pattern = re::sregex::compile(spattern);
+    int32_t lineNo = 1;
+    int32_t matchIndex = -1;
+    int32_t afterCount = after;
+    boost::circular_buffer<GrepTrace> beforeBuffer(before+1);
+    beforeBuffer.push_back(GrepTrace());
+
+    auto* pGrepTrace = &beforeBuffer.back();
+    while(std::getline(inFile, pGrepTrace->line))
+    {
+        pGrepTrace->lineNo = lineNo++;
+
+        re::sregex_token_iterator begin(pGrepTrace->line.begin(), pGrepTrace->line.end(), pattern);
+        decltype(begin) end;
+        if(begin != end)
         {
-            pGrepTrace->lineNo = lineNo++;
-
-            re::sregex_token_iterator begin(pGrepTrace->line.begin(), pGrepTrace->line.end(), pattern);
-            decltype(begin) end;
-            if(begin != end)
+            pGrepTrace->matched = true;
+            pResponse->matches.emplace_back();
+            auto& match = pResponse->matches.back();
+            match.lineNo = pGrepTrace->lineNo;
+            ++matchIndex;
+            for(auto itSubMatch = begin; itSubMatch != end; ++itSubMatch)
             {
-                pGrepTrace->matched = true;
-                pResponse->matches.emplace_back();
-                auto& match = pResponse->matches.back();
-                match.lineNo = pGrepTrace->lineNo;
-                ++matchIndex;
-                for(auto itSubMatch = begin; itSubMatch != end; ++itSubMatch)
-                {
-                    match.subMatches.emplace_back();
-                    auto& subMatch = match.subMatches.back();
-                    subMatch.from = (itSubMatch)->first - pGrepTrace->line.begin();
-                    subMatch.to = (itSubMatch)->second - pGrepTrace->line.begin();;
-                }
-
-                while(!beforeBuffer.empty())
-                {
-                    auto& topTrace = beforeBuffer.front();
-                    pResponse->selectedLines.emplace_back();
-                    auto& selectedLine = pResponse->selectedLines.back();
-                    selectedLine.lineNo = topTrace.lineNo;
-                    selectedLine.matchIndex = matchIndex;
-                    selectedLine.line = std::move(topTrace.line);
-                    beforeBuffer.pop_front();
-                }
-
-                afterCount = pGrepFileRequest->after;
+                match.subMatches.emplace_back();
+                auto& subMatch = match.subMatches.back();
+                subMatch.from = (itSubMatch)->first - pGrepTrace->line.begin();
+                subMatch.to = (itSubMatch)->second - pGrepTrace->line.begin();;
             }
-            else if(afterCount > 0)
+
+            while(!beforeBuffer.empty())
             {
-                afterCount--;
                 auto& topTrace = beforeBuffer.front();
                 pResponse->selectedLines.emplace_back();
                 auto& selectedLine = pResponse->selectedLines.back();
@@ -161,8 +162,53 @@ void OPCBasic::OnGrepFileRequest(const std::shared_ptr<OMessage>& pMessage
                 beforeBuffer.pop_front();
             }
 
-            beforeBuffer.push_back(GrepTrace());
-            pGrepTrace = &beforeBuffer.back();
+            afterCount = after;
+        }
+        else if(afterCount > 0)
+        {
+            afterCount--;
+            auto& topTrace = beforeBuffer.front();
+            pResponse->selectedLines.emplace_back();
+            auto& selectedLine = pResponse->selectedLines.back();
+            selectedLine.lineNo = topTrace.lineNo;
+            selectedLine.matchIndex = matchIndex;
+            selectedLine.line = std::move(topTrace.line);
+            beforeBuffer.pop_front();
+        }
+
+        beforeBuffer.push_back(GrepTrace());
+        pGrepTrace = &beforeBuffer.back();
+    }
+}
+
+void OPCBasic::OnGrepFilesRequest(const std::shared_ptr<OMessage>& pMessage
+    , GrepFilesRequest* pGrepFilesRequest)
+{
+    TRY_RESPONSE(GrepFilesResponse, pMessage, pResponse)
+    {
+        if(pGrepFilesRequest->before < 0)
+        {
+            throw std::invalid_argument("GrepFilesRequest::before should greatequal 0");
+        }
+
+        if(pGrepFilesRequest->after < 0)
+        {
+           throw  std::invalid_argument("GrepFilesRequest::after should greatequal 0");
+        }
+
+        PathVec files;
+        FindFiles(pGrepFilesRequest->path, pGrepFilesRequest->pattern, files);
+        for(auto& p : files)
+        {
+
+            pResponse->allMatches.emplace_back();
+            auto& singleMatch = pResponse->allMatches.back();
+            singleMatch.path = p.string();
+            GrepFile(&(singleMatch.singleMatches)
+                , pGrepFilesRequest->path
+                , pGrepFilesRequest->pattern
+                , pGrepFilesRequest->before
+                , pGrepFilesRequest->after);
         }
     }
     CATCH_RESPONSE(pResponse)

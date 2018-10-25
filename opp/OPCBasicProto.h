@@ -165,12 +165,20 @@ struct GrepFilesRequest: public OProtoBase
    PROTO_FIELDS(GREP_FILES_REQUEST_FIELDS)
 };
 
+struct GrepFilesResult: public OProtoBase
+{
+#define GREP_FILES_RESULT_FIELDS\
+    ((std::string, path))\
+    ((GrepFileResponse,singleMatches))
+
+    PROTO_FIELDS(GREP_FILES_RESULT_FIELDS)
+};
+
 struct GrepFilesResponse: public OProtoBase
 {
 #define GREP_FILES_RESPONSE_FIELDS\
     OMESSAGE_RESPONSE_FIELDS\
-    ((std::vector<GrepLineResult>, matches))\
-    ((std::vector<SelectedGrepLine>, selectedLines))
+    ((std::vector<GrepFilesResult>, allMatches))\
 
     PROTO_FIELDS(GREP_FILES_RESPONSE_FIELDS)
 };
